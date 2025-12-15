@@ -1,6 +1,0 @@
-../Middlewares/ST/rfal/Src/rfal_iso15693_2.c:474:19:rfalIso15693PhyVCDCode1Of256	7
-../Middlewares/ST/rfal/Src/rfal_iso15693_2.c:416:19:rfalIso15693PhyVCDCode1Of4	6
-../Middlewares/ST/rfal/Src/rfal_iso15693_2.c:95:12:rfalIso15693PhyConfigure	2
-../Middlewares/ST/rfal/Src/rfal_iso15693_2.c:122:12:rfalIso15693PhyGetConfiguration	1
-../Middlewares/ST/rfal/Src/rfal_iso15693_2.c:129:12:rfalIso15693VCDCode	26
-../Middlewares/ST/rfal/Src/rfal_iso15693_2.c:268:12:rfalIso15693VICCDecode	24

@@ -15,8 +15,10 @@ extern uint8_t auth_flag;
 
 uint8_t *spice_api_send_buffer = Card.operation_tmp;
 const char spice_insert_cmd[78] = "{\"id\":1,\"module\":\"card\",\"function\":\"insert\",\"params\":[0,\"E00401AF87654321\"]}";//应为E00401开头
-const char spice_light_cmd[113] = "{\"id\":2,\"module\":\"lights\",\"function\":\"read\",\"params\":[\"IC Card Reader R\",\"IC Card Reader G\",\"IC Card Reader B\"]}";
-uint8_t spice_led_ready = 0;
+volatile const char spice_light_cmd[113] = "{\"id\":2,\"module\":\"lights\",\"function\":\"read\",\"params\":[\"IC Card Reader R\",\"IC Card Reader G\",\"IC Card Reader B\"]}";
+volatile const char spice_light_cmd_IIDX_P1[122] = "{\"id\":2,\"module\":\"lights\",\"function\":\"read\",\"params\":[\"IC Card Reader P1 R\",\"IC Card Reader P1 G\",\"IC Card Reader P1 B\"]}";
+volatile const char spice_light_cmd_IIDX_P2[122] = "{\"id\":2,\"module\":\"lights\",\"function\":\"read\",\"params\":[\"IC Card Reader P2 R\",\"IC Card Reader P2 G\",\"IC Card Reader P2 B\"]}";
+uint8_t spice_mode_detect_flag = 0;
 
 
 char hex2str(uint8_t hex){
@@ -52,7 +54,7 @@ void spice_iso14443_process(){
 	  spice_api_send_buffer[66+2*i] = hex2str(uid[i] & 0xF);
 	}
 	spice_api_send_buffer[54] = 48;
-	if(Flash.spice_setting & SYSTEM_MODE_SEETING){//开启了2P刷卡
+	if(Flash.spice_setting & SYSTEM_IIDX_2P){//开启了2P刷卡
 		spice_api_send_buffer[54] = 49;//"params\":[1,......
 	}
 	Interface_Send(spice_api_send_buffer,79);
@@ -64,7 +66,7 @@ void spice_felice_process(){
     	spice_api_send_buffer[57+2*i] = hex2str(Card.felica_IDm[i] >> 4);//高4位转换为字符
     	spice_api_send_buffer[58+2*i] = hex2str(Card.felica_IDm[i] & 0xF);//低4位转换为字符
     }
-    if(Flash.spice_setting & SYSTEM_MODE_SEETING){//开启了2P刷卡
+    if(Flash.spice_setting & SYSTEM_IIDX_2P){//开启了2P刷卡
 		spice_api_send_buffer[54] = 49;//"params\":[1,......
 	}
     spice_api_send_buffer[54] = 48;
@@ -77,7 +79,7 @@ void spice_iso15693_process(){
     	spice_api_send_buffer[57+2*i] = hex2str(Card.iso15693_uid[i] >> 4);//高4位转换为字符
     	spice_api_send_buffer[58+2*i] = hex2str(Card.iso15693_uid[i] & 0xF);//低4位转换为字符
     }
-    if(Flash.spice_setting & SYSTEM_MODE_SEETING){//开启了2P刷卡
+    if(Flash.spice_setting & SYSTEM_IIDX_2P){//开启了2P刷卡
 		spice_api_send_buffer[54] = 49;//"params\":[1,......
 	}
     spice_api_send_buffer[54] = 48;
@@ -106,8 +108,16 @@ void spice_iso15693_process(){
 //    Interface_Send(spice_api_send_buffer,79);
 //}
 
-void spice_request(){
-	  Interface_Send(spice_light_cmd,113);
+void spice_request(uint8_t spice_mode_detect_flag){
+	if(spice_mode_detect_flag){
+		if(Flash.spice_setting & SYSTEM_IIDX_2P){
+			Interface_Send((const uint8_t*)spice_light_cmd_IIDX_P2,122);
+		}else{
+			Interface_Send((const uint8_t*)spice_light_cmd_IIDX_P1,122);
+		}
+	}else{
+		Interface_Send((const uint8_t*)spice_light_cmd,113);
+	}
 }
 
 uint8_t spice_request_check(uint8_t* data,uint8_t len){
@@ -142,6 +152,9 @@ uint8_t spice_request_check(uint8_t* data,uint8_t len){
 						}
 					}
 				}
+			}
+			if(sync_count < 6){
+				return 0;
 			}
 			LED_show(spice_api_target_rgb[0],spice_api_target_rgb[1],spice_api_target_rgb[2]);
 			return 1;

@@ -1,7 +1,0 @@
-../Core/Src/custom_bus.c:130:9:BSP_SPI1_DeInit	4
-../Core/Src/custom_bus.c:156:9:BSP_SPI1_Send	2
-../Core/Src/custom_bus.c:173:10:BSP_SPI1_Recv	2
-../Core/Src/custom_bus.c:190:9:BSP_SPI1_SendRecv	2
-../Core/Src/custom_bus.c:259:9:BSP_GetTick	1
-../Core/Src/custom_bus.c:265:26:MX_SPI1_Init	1
-../Core/Src/custom_bus.c:89:9:BSP_SPI1_Init	4

@@ -1,2 +1,0 @@
-../Core/Src/mifare_ul.c:63:12:mifareUlReadNBytes	7
-../Core/Src/mifare_ul.c:119:12:mifareUlWritePage	5

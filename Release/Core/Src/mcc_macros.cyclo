@@ -1,3 +1,0 @@
-../Core/Src/mcc_macros.c:85:10:mccReverse	1
-../Core/Src/mcc_macros.c:93:10:mccParityEven	1
-../Core/Src/mcc_macros.c:102:10:mccParityOdd	1

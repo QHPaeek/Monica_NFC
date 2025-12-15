@@ -14,14 +14,14 @@ extern USBD_HandleTypeDef hUsbDevice;
 extern TIM_HandleTypeDef htim17;
 
 
-extern uint8_t spice_led_ready;
+extern uint8_t spice_mode_detect_flag;
 Machine Reader;
-uint8_t mode_probe_flag[2] = {0,0};
+//uint8_t mode_probe_flag[2] = {0,0};
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM17) {
     	if(Reader.Current_Mode == MODE_SPICE_API){
-    		spice_request();
+    		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
     		return;
     	}
     }
@@ -32,22 +32,17 @@ void Mode_Poll(){
 		return;
 	}
 	if(Reader.Current_Interface == INTERFACE_NONE){
-		switch(mode_probe_flag[0]){
-			case 0 :{
-				Reader.Current_Interface = INTERFACE_CDC;
-				spice_request();
-				Reader.Current_Interface = INTERFACE_NONE;
-				mode_probe_flag[0] = 1;
-			}
-			case 1 :{
-				Reader.Current_Interface = INTERFACE_UART;
-				spice_request();
-				Reader.Current_Interface = INTERFACE_NONE;
-				mode_probe_flag[0] = 0;
-			}
-		}
+//		if(spice_mode_detect_flag){
+//			spice_mode_detect_flag = 0;
+//		}else{
+//			spice_mode_detect_flag ++;
+//		}
+		Reader.Current_Interface = INTERFACE_CDC;
+		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
+		Reader.Current_Interface = INTERFACE_UART;
+		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
+		Reader.Current_Interface = INTERFACE_NONE;
 	}
-
 }
 
 uint8_t Mode_Detect(uint8_t* data,uint8_t len){
@@ -64,15 +59,20 @@ uint8_t Mode_Detect(uint8_t* data,uint8_t len){
 	}
 	test = namco_packet_check(data,len);
 	if(test){
-		//HAL_TIM_Base_Start_IT(&htim17);
 		namco_packet_process(test);
-		return MODE_SPICE_API;
+		return MODE_NAMCO_SERIAL;
+	}
+	test = AimeIO_packet_check(data,len);
+	if(test){
+		AimeIO_process(test);
+		return MODE_AIME_IO;
 	}
 	return MODE_IDLE;
 }
 
 void Reader_UART_Init(){
-	switch (Flash.system_setting && 0b1111){
+	uint8_t Uart_Parameter = Flash.system_setting && 0b1111;
+	switch (Uart_Parameter){
 		case 0:
 			break;
 		case 1:{
@@ -102,7 +102,6 @@ void Reader_UART_Init(){
 
 void Reader_UART_IRQHandler(){
 	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE)){
-
 		__HAL_UART_CLEAR_IDLEFLAG(&huart1);
 		HAL_UART_DMAStop(&huart1);
 		if(Reader.Current_Interface == INTERFACE_NONE){
@@ -121,6 +120,9 @@ void Reader_UART_IRQHandler(){
 					break;
 				case MODE_NAMCO_SERIAL:
 					namco_packet_process(namco_packet_check(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx)));
+					break;
+				case MODE_AIME_IO:
+					AimeIO_process(AimeIO_packet_check(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx)));
 					break;
 				default:
 					break;
@@ -152,6 +154,9 @@ void Reader_CDC_IRQHandler(uint8_t* data, uint8_t len){
 				break;
 			case MODE_NAMCO_SERIAL:
 				namco_packet_process(namco_packet_check(data,len));
+				break;
+			case MODE_AIME_IO:
+				AimeIO_process(AimeIO_packet_check(data,len));
 				break;
 			default:
 				break;

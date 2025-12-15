@@ -1,4 +1,0 @@
-../X-CUBE-NFC6/Target/logger.c:91:6:logUsartInit	1
-../X-CUBE-NFC6/Target/logger.c:119:9:logUsartTx	2
-../X-CUBE-NFC6/Target/logger.c:143:5:logUsart	1
-../X-CUBE-NFC6/Target/logger.c:175:7:hex2Str	4

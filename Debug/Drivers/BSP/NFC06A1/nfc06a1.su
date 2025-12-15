@@ -1,5 +1,0 @@
-../Drivers/BSP/NFC06A1/nfc06a1.c:63:6:NFC06A1_LED_Init	80	static
-../Drivers/BSP/NFC06A1/nfc06a1.c:91:6:NFC06A1_LED_DeInit	16	static
-../Drivers/BSP/NFC06A1/nfc06a1.c:107:6:NFC06A1_LED_ON	8	static
-../Drivers/BSP/NFC06A1/nfc06a1.c:117:6:NFC06A1_LED_OFF	8	static
-../Drivers/BSP/NFC06A1/nfc06a1.c:127:6:NFC06A1_LED_Toggle	8	static

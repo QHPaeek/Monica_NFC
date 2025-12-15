@@ -1,5 +1,0 @@
-../X-CUBE-NFC6/App/app_x-cube-nfcx.c:189:13:BSP_SPI1_IRQ_Callback	8	static
-../X-CUBE-NFC6/App/app_x-cube-nfcx.c:73:6:MX_X_CUBE_NFC6_Process	8	static
-../X-CUBE-NFC6/App/app_x-cube-nfcx.c:83:6:MX_NFC6_PollingDemo_Init	8	static
-../X-CUBE-NFC6/App/app_x-cube-nfcx.c:49:6:MX_X_CUBE_NFC6_Init	8	static
-../X-CUBE-NFC6/App/app_x-cube-nfcx.c:152:9:BSP_NFC0XCOMM_SendRecv	16	static

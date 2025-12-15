@@ -1,3 +1,0 @@
-../Core/Src/mcc_crypto_card.c:84:6:mccCryptoAuthCardStep1	2
-../Core/Src/mcc_crypto_card.c:96:5:mccCryptoAuthCardStep2	1
-../Core/Src/mcc_crypto_card.c:113:5:mccCryptoAuthCardStep3	1

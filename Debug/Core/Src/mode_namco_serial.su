@@ -1,2 +1,0 @@
-../Core/Src/mode_namco_serial.c:40:9:namco_packet_check	8	static
-../Core/Src/mode_namco_serial.c:58:6:namco_packet_process	64	static

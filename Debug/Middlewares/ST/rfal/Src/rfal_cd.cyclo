@@ -1,3 +1,0 @@
-../Middlewares/ST/rfal/Src/rfal_cd.c:151:12:rfalCdStartDetectCard	2
-../Middlewares/ST/rfal/Src/rfal_cd.c:166:12:rfalCdGetDetectCardStatus	79
-../Middlewares/ST/rfal/Src/rfal_cd.c:139:12:rfalCdDetectCard	3

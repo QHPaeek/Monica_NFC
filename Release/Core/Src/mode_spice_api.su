@@ -1,6 +1,0 @@
-../Core/Src/mode_spice_api.c:22:6:hex2str	0	static
-../Core/Src/mode_spice_api.c:32:6:spice_iso14443_process	40	static
-../Core/Src/mode_spice_api.c:61:6:spice_felice_process	24	static
-../Core/Src/mode_spice_api.c:74:6:spice_iso15693_process	24	static
-../Core/Src/mode_spice_api.c:109:6:spice_request	8	static
-../Core/Src/mode_spice_api.c:113:9:spice_request_check	32	static

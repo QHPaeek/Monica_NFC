@@ -1,3 +1,0 @@
-../Core/Src/mcc_crypto_reader.c:84:6:mccCryptoAuthReaderStep1	8	static
-../Core/Src/mcc_crypto_reader.c:96:5:mccCryptoAuthReaderStep2	40	static
-../Core/Src/mcc_crypto_reader.c:144:5:mccCryptoAuthReaderStep3	16	static

@@ -1,3 +1,0 @@
-../Middlewares/ST/rfal/Src/rfal_t2t.c:114:13:rfalT2TPollerRead	6
-../Middlewares/ST/rfal/Src/rfal_t2t.c:140:13:rfalT2TPollerWrite	5
-../Middlewares/ST/rfal/Src/rfal_t2t.c:171:13:rfalT2TPollerSectorSelect	8

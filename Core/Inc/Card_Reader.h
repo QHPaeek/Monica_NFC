@@ -106,5 +106,6 @@ ReturnCode ActivateP2P( uint8_t* nfcid, uint8_t nfidLen, bool isActive, rfalNfcD
 ReturnCode IsoDepBlockingTxRx( rfalIsoDepDevice *isoDepDev, const uint8_t *txBuf, uint16_t txBufSize, uint8_t *rxBuf, uint16_t rxBufSize, uint16_t *rxActLen );
 uint8_t APDU_check_response(uint8_t *data,uint16_t len);
 bool T_Union_Read();
+static uint32_t rng_get32(void);
 
 #endif /* INC_CARD_READER_H_ */

@@ -1,6 +1,0 @@
-../X-CUBE-NFC6/Target/demo_polling.c:183:13:demoNotif	8
-../X-CUBE-NFC6/Target/demo_polling.c:233:6:demoIni	3
-../X-CUBE-NFC6/Target/demo_polling.c:796:12:demoTransceiveBlocking	3
-../X-CUBE-NFC6/Target/demo_polling.c:744:6:demoAPDU	7
-../X-CUBE-NFC6/Target/demo_polling.c:689:6:demoP2P.isra	5
-../X-CUBE-NFC6/Target/demo_polling.c:336:6:demoCycle	34

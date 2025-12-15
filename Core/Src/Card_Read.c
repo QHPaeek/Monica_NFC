@@ -6,6 +6,9 @@
  */
 #include "Card_Reader.h"
 #include "mode_manager.h"
+#include "st_errno.h"
+#include "rfal_utils.h"
+#include "mode_sega_serial.h"
 
 #define RFAL_NFCA_SEL_RES_CONF_MIFARE    	0x08 /* SEL_RES (SAK) Mifare configuration */
 #define DEMO_NFCV_BLOCK_LEN           		4     /*!< NFCV Block len                      */
@@ -45,35 +48,37 @@ void mifare_pre_read(){
 	mccInitialize();
 	Card.mifare_auth_status = 0;
 	if(!auth_flag){
-		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, AimeKey) != RFAL_ERR_NONE){
+		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)AimeKey) != RFAL_ERR_NONE){
 
 		}else{
 			memcpy(Card.mifare_right_key_a,AimeKey,6);
 			Card.mifare_auth_status |= Auth_KeyA_Right;
 		}
-		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, AimeKey) != RFAL_ERR_NONE){
+		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, (uint8_t *)AimeKey) != RFAL_ERR_NONE){
 
 		}else{
 			memcpy(Card.mifare_right_key_b,AimeKey,6);
 			Card.mifare_auth_status |= Auth_KeyB_Right;
 		}
 		auth_flag ++;
+		goto read2;
 	}else if(auth_flag == 1){
-		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, BanaKey_A) != RFAL_ERR_NONE){
+		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_A) != RFAL_ERR_NONE){
 			//platformLog("banakey a fail\r\n");
 		}else{
 			//platformLog("banakey a success\r\n");
 			memcpy(Card.mifare_right_key_a,BanaKey_A,6);
 			Card.mifare_auth_status |= Auth_KeyA_Right;
 		}
-		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, BanaKey_B) != RFAL_ERR_NONE){
+		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_B) != RFAL_ERR_NONE){
 		}else{
 			memcpy(Card.mifare_right_key_b,BanaKey_B,6);
 			Card.mifare_auth_status |= Auth_KeyB_Right;
 		}
 		auth_flag ++;
+		goto read1;
 	}else{
-		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, JubeatKey) != RFAL_ERR_NONE){
+		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)JubeatKey) != RFAL_ERR_NONE){
 
 		}else{
 			memcpy(Card.mifare_right_key_a,JubeatKey,6);
@@ -81,10 +86,30 @@ void mifare_pre_read(){
 			Card.mifare_auth_status = Auth_ALL_Right;
 		}
 		auth_flag = 0;
+		goto read1;
 	}
+read1:
 	if(Card.mifare_auth_status == Auth_ALL_Right){
 		uint8_t tmp[18];
 		for(uint8_t i = 1;i<3;i++){
+			mifareReadBlock(0, i, tmp, 18);
+			memcpy(Card.mifare_data[i], tmp, 16);
+		}
+		uint8_t zero[10] = {0,0,0,0,0,0,0,0,0,0};
+		if(memcmp(Card.mifare_data[2] + 6,zero,10) == 0){
+			//All Zero Card mean read failed
+			Card.mifare_auth_status = Auth_ALL_Failed;
+		}
+	}
+	else if(Card.mifare_auth_status == 0){
+		Card.mifare_auth_status = Auth_ALL_Failed;
+	}
+	mccDeinitialise(true);
+	return;
+read2:
+	if(Card.mifare_auth_status == Auth_ALL_Right){
+		uint8_t tmp[18];
+		for(uint8_t i = 2;i>0;i--){
 			mifareReadBlock(0, i, tmp, 18);
 			memcpy(Card.mifare_data[i], tmp, 16);
 //			platformLog(" Read block %d:");
@@ -93,11 +118,17 @@ void mifare_pre_read(){
 //			}
 //			platformLog("\r\n");
 		}
+		uint8_t zero[10] = {0,0,0,0,0,0,0,0,0,0};
+		if(memcmp(Card.mifare_data[2] + 6,zero,10) == 0){
+			//All Zero Card mean read failed
+			Card.mifare_auth_status = Auth_ALL_Failed;
+		}
 	}
-	if(Card.mifare_auth_status == 0){
+	else if(Card.mifare_auth_status == 0){
 		Card.mifare_auth_status = Auth_ALL_Failed;
 	}
 	mccDeinitialise(true);
+	return;
 }
 
 void mifare_ul_read(){
@@ -131,12 +162,16 @@ void Card_Poll()
     rfalNfcvListenDevice  	nfcvDev;
     uint8_t              	devCnt = 0;
 
+//    if((Reader.Current_Mode == MODE_SEGA_SERIAL)  && sega_reading_status){
+//    	return;
+//    }
+    rfalFieldOnAndStartGT();
     /*******************************************************************************/
     /* NFC-A Technology Detection                                                  */
     /*******************************************************************************/
 
     rfalNfcaPollerInitialize();                                                       /* Initialize RFAL for NFC-A */
-    rfalFieldOnAndStartGT();                                                          /* Turns the Field On and starts GT timer */
+
 
     //err = rfalNfcaPollerTechnologyDetection( RFAL_COMPLIANCE_MODE_NFC, &sensRes ); /* Poll for NFC-A devices */
     err = rfalNfcaPollerFullCollisionResolution(RFAL_COMPLIANCE_MODE_NFC,1,&nfcaDev,&devCnt);
@@ -163,9 +198,10 @@ void Card_Poll()
 					rfalFieldOff();
 					return;
 				}
-			}else {
-				memcpy(Card.iso14443_uid7,nfcaDev.nfcId1,7);
 			}
+    	}else{
+    		rfalFieldOff();
+    		return;
     	}
     	Card.operation = Operation_detected;
         /*******************************************************************************/
@@ -188,13 +224,16 @@ void Card_Poll()
 						if(Card.type != Card_Type_Mifare_UltraLight){
 							memset(Card.data,0,128);
 							Card.type = Card_Type_Mifare_UltraLight;
-						}else if(Card.mifare_ul_read_status != 1){
-							mifare_ul_read();
 						}
+						memcpy(Card.iso14443_uid7,nfcaDev.nfcId1,7);
+						mifare_ul_read();
 			        	switch(Reader.Current_Mode){
-			        		case MODE_IDLE:
-			        			LED_show(128,128,0);
-			        			break;
+							case MODE_IDLE:{
+								uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
+								memcpy(data+5,Card.iso14443_uid7,4);
+								USBD_CUSTOM_HID_SendReport(&hUsbDevice,data, 9);
+								break;
+							}
 			        		case MODE_SPICE_API:
 			        			spice_iso14443_process();
 								break;
@@ -207,12 +246,18 @@ void Card_Poll()
 		        	if(Card.type != Card_Type_Mifare_Classic){
 		        		memset(Card.data,0,128);
 		        	}
-		        	Card.type = Card_Type_Mifare_Classic;
 		        	mifare_pre_read();
+//		        	if(Card.mifare_auth_status == Auth_ALL_Failed){
+//		        		goto no_card;
+//		        	}
+		        	Card.type = Card_Type_Mifare_Classic;
 		        	switch(Reader.Current_Mode){
-		        		case MODE_IDLE:
-		        			LED_show(0,255,0);
-		        			break;
+		        		case MODE_IDLE:{
+							uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
+							memcpy(data+5,Card.iso14443_uid4,4);
+							USBD_CUSTOM_HID_SendReport(&hUsbDevice,data, 9);
+							break;
+						}
 		        		case MODE_SPICE_API:
 		        			spice_iso14443_process();
 		        			break;
@@ -225,17 +270,22 @@ void Card_Poll()
 		        	if(Card.type != Card_Type_Mifare_Classic){
 		        		memset(Card.data,0,128);
 		        	}
-		        	Card.type = Card_Type_Mifare_Classic;
 		        	mifare_pre_read();
+//		        	if(Card.mifare_auth_status == Auth_ALL_Failed){
+//						goto no_card;
+//					}
+		        	Card.type = Card_Type_Mifare_Classic;
 		        	switch(Reader.Current_Mode){
-		        		case MODE_IDLE:
-		        			LED_show(0,255,0);
-		        			break;
+		        		case MODE_IDLE:{
+							uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
+							memcpy(data+5,Card.iso14443_uid4,4);
+							USBD_CUSTOM_HID_SendReport(&hUsbDevice,data, 9);
+							break;
+						}
 		        		case MODE_SPICE_API:
 		        			spice_iso14443_process();
 		        			break;
 		        	}
-
 		            break;
 			}
 		}
@@ -251,9 +301,9 @@ void Card_Poll()
 			memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
 	    	Card.type = Card_Type_ISO14443A_Unknow;
 		}
-	      /* Check if device supports P2P/NFC-DEP */
+		/* Check if device supports P2P/NFC-DEP */
 		else if( (nfcaDev.type == RFAL_NFCA_NFCDEP) || (nfcaDev.type == RFAL_NFCA_T4T_NFCDEP))
-	      {
+		{
 	        /* Continue with P2P Activation .... */
 
 //	        err = ActivateP2P( NFCID3, RFAL_NFCDEP_NFCID3_LEN, false, &gDevProto.nfcDepDev );
@@ -270,19 +320,22 @@ void Card_Poll()
 //	        }
 			memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
 			Card.type = Card_Type_ISO14443A_Unknow;
-	      }
-	      /* Check if device supports ISO14443-4/ISO-DEP */
-	      else if (nfcaDev.type == RFAL_NFCA_T4T)
-	      {
+	     }
+	     /* Check if device supports ISO14443-4/ISO-DEP */
+	     else if (nfcaDev.type == RFAL_NFCA_T4T)
+	     {
 	        /* Activate the ISO14443-4 / ISO-DEP layer */
 
 	    	  if(T_Union_Read()){
 	    		  Card.type = Card_Type_ISO14443A_T_Union;
 	    		  memcpy(Card.t_union_uid,nfcaDev.nfcId1,4);
 	    		  switch(Reader.Current_Mode){
-	    		  	  case MODE_IDLE:
-	    		  		LED_show(255,0,255);
-	    		  		break;
+	    		  	  case MODE_IDLE:{
+						uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
+						memcpy(data+5,Card.t_union_uid,4);
+						USBD_CUSTOM_HID_SendReport(&hUsbDevice,data, 9);
+						break;
+					}
 	    		  	case MODE_SPICE_API:
 						spice_iso14443_process();
 						break;
@@ -291,16 +344,15 @@ void Card_Poll()
 	    		  memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
 	    		  Card.type = Card_Type_ISO14443A_Unknow;
 	    	  }
-	      }
-		rfalFieldOff();
-		return;
+	     }
+		 rfalFieldOff();
+		 return;
     }
 	/*******************************************************************************/
 	/* Felica/NFC_F_PASSIVE_POLL_MODE                                              */
 	/*******************************************************************************/
 
 	rfalNfcfPollerInitialize( RFAL_BR_212 ); /* Initialize for NFC-F */
-	rfalFieldOnAndStartGT();                 /* Turns the Field On if not already and start GT timer */
 
 	err = rfalNfcfPollerCheckPresence();
 	if( err == ERR_NONE )
@@ -326,19 +378,6 @@ void Card_Poll()
 //			rfalFieldOff();
 //			demoNfcf();
 
-//			uint16_t servicelist;
-//			uint8_t blockList_4[4] = {0x82,0x86,0x90,0x91};
-//			uint8_t blockdata[4][16];
-//			err = nfcfReadBlock(Card.felica_IDm,&servicelist ,4,blockList_4 ,blockdata);
-//			if(err == ERR_NONE){
-//				LED_show(0,0,255);
-//				CDC_Transmit(0, blockdata[0], 4*16);
-//			}else{
-//				LED_show(255,0,0);
-//				CDC_Transmit(0, &err, 2);
-//			}
-
-
         	switch(Reader.Current_Mode){
         		case MODE_IDLE:
         			LED_show(0,0,255);
@@ -354,14 +393,14 @@ void Card_Poll()
 			rfalFieldOff();
 			return;
 		}
-
+		rfalFieldOff();
+		return;
 	}
 	/*******************************************************************************/
 	/* ISO15693/NFC_V_PASSIVE_POLL_MODE                                            */
 	/*******************************************************************************/
 
-	rfalNfcvPollerInitialize();           /* Initialize for NFC-F */
-	rfalFieldOnAndStartGT();              /* Turns the Field On if not already and start GT timer */
+	rfalNfcvPollerInitialize();           /* Initialize for NFC-V */
 
 	err = rfalNfcvPollerCollisionResolution(1,1, &nfcvDev, &devCnt);
 	if( (err == ERR_NONE) && (devCnt > 0) )
@@ -395,6 +434,7 @@ void Card_Poll()
 		return;
 	}
 
+no_card:
 	//No Card Deteced
 	//platformLog("no card\r\n");
     platformLedOff(PLATFORM_LED_A_PORT, PLATFORM_LED_A_PIN);
@@ -460,58 +500,110 @@ uint8_t APDU_check_response(uint8_t *data,uint16_t len){
 	return 0;
 }
 
-ReturnCode nfcfReadBlock(uint8_t *idm,uint16_t *serviceList ,uint8_t num_block,uint8_t *blockList ,uint8_t blockdata[4][16])
-{
-    ReturnCode                 err;
-    rfalNfcfListenDevice  		nfcfDev;
-    uint8_t                    buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*RFAL_NFCF_BLOCK_LEN)) ];
-    uint16_t                   rcvLen;
-    rfalNfcfServ               srv = 0x000b;
-    //rfalNfcfServ               srv = 0x090f;
-    rfalNfcfBlockListElem _blockList[4];
-    rfalNfcfServBlockListParam servBlock;
-    uint8_t              	devCnt = 0;
+//void demo_suica()
+//{
+//    ReturnCode                 err;
+//    rfalNfcfListenDevice  		nfcfDev;
+//    uint8_t                    buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*RFAL_NFCF_BLOCK_LEN)) ];
+//    uint16_t                   rcvLen;
+//    rfalNfcfServ               srv = 0x008b;
+//    //rfalNfcfServ               srv = 0x090f;
+//    rfalNfcfBlockListElem _blockList[4];
+//    rfalNfcfServBlockListParam servBlock;
+//    uint8_t              	devCnt = 0;
+//
+//    servBlock.numServ   = 1;                            /* Only one Service to be used           */
+//    servBlock.servList  = &srv;                         /* Service Code: NDEF is Read/Writeable  */
+//    servBlock.numBlock  = num_block;                            /* Only one block to be used             */
+//    servBlock.blockList = _blockList;
+//	for(uint8_t i = 0;i<num_block;i++){
+//		_blockList[i].conf = RFAL_NFCF_BLOCKLISTELEM_LEN_BIT;
+//		_blockList[i].blockNum = blockList[i];
+//	}
+//
+//    rfalFieldOff();
+//    while(1){
+//    	rfalNfcfPollerInitialize( RFAL_BR_212 ); /* Initialize for NFC-F */
+//		rfalFieldOnAndStartGT();                 /* Turns the Field On if not already and start GT timer */
+//
+//		err = rfalNfcfPollerCheckPresence();
+//		if( err == ERR_NONE)
+//		{
+//			err = rfalNfcfPollerCollisionResolution( RFAL_COMPLIANCE_MODE_NFC, 1, &nfcfDev, &devCnt );
+//			if( (err == ERR_NONE) && (devCnt > 0))
+//			{
+//				if(memcmp(idm,nfcfDev.sensfRes.NFCID2,8)){
+//					return RFAL_ERR_TIMEOUT;
+//				}
+//				err = rfalNfcfPollerCheck(idm, &servBlock, buf, sizeof(buf), &rcvLen);
+//				if(err == ERR_NONE){
+//					//DECRYPT_ACCESSCODE(buf+1);
+//					//CDC_Transmit(0, buf+1,  16);
+//				    for(uint8_t i = 0;i<num_block;i++){
+//				    	memcpy(blockdata[i],&buf[1 + (16*i)],16);
+//				    }
+//				    rfalFieldOff();
+//				    return err;
+//				}
+//			}
+//
+//		}
+//		rfalFieldOff();
+//		return RFAL_ERR_TIMEOUT;
+//    }
+//}
 
-    servBlock.numServ   = 1;                            /* Only one Service to be used           */
-    servBlock.servList  = &srv;                         /* Service Code: NDEF is Read/Writeable  */
-    servBlock.numBlock  = num_block;                            /* Only one block to be used             */
-    servBlock.blockList = _blockList;
-	for(uint8_t i = 0;i<num_block;i++){
-		_blockList[i].conf = RFAL_NFCF_BLOCKLISTELEM_LEN_BIT;
-		_blockList[i].blockNum = blockList[i];
-	}
 
-    rfalFieldOff();
-    while(1){
-    	rfalNfcfPollerInitialize( RFAL_BR_212 ); /* Initialize for NFC-F */
-		rfalFieldOnAndStartGT();                 /* Turns the Field On if not already and start GT timer */
-
-		err = rfalNfcfPollerCheckPresence();
-		if( err == ERR_NONE)
-		{
-			err = rfalNfcfPollerCollisionResolution( RFAL_COMPLIANCE_MODE_NFC, 1, &nfcfDev, &devCnt );
-			if( (err == ERR_NONE) && (devCnt > 0))
-			{
-				if(memcmp(idm,nfcfDev.sensfRes.NFCID2,8)){
-					return RFAL_ERR_TIMEOUT;
-				}
-				err = rfalNfcfPollerCheck(idm, &servBlock, buf, sizeof(buf), &rcvLen);
-				if(err == ERR_NONE){
-					//DECRYPT_ACCESSCODE(buf+1);
-					//CDC_Transmit(0, buf+1,  16);
-				    for(uint8_t i = 0;i<num_block;i++){
-				    	memcpy(blockdata[i],&buf[1 + (16*i)],16);
-				    }
-				    rfalFieldOff();
-				    return err;
-				}
-			}
-
-		}
-		rfalFieldOff();
-		return RFAL_ERR_TIMEOUT;
-    }
-}
+//ReturnCode nfcfReadBlock(uint8_t *idm,uint16_t *serviceList ,uint8_t num_block,uint8_t *blockList ,uint8_t blockdata[4][16])
+//{
+//    ReturnCode                 err;
+//    rfalNfcfListenDevice  		nfcfDev;
+//    uint8_t                    buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*16)) ];
+//    uint16_t                   rcvLen;
+//    rfalNfcfServ               srv = *serviceList;
+//    //rfalNfcfServ               srv = 0x090f;
+//    rfalNfcfBlockListElem _blockList[4];
+//    rfalNfcfServBlockListParam servBlock;
+//    uint8_t              	devCnt = 0;
+//
+//    servBlock.numServ   = 1;                            /* Only one Service to be used           */
+//    servBlock.servList  = &srv;                         /* Service Code: NDEF is Read/Writeable  */
+//    servBlock.numBlock  = num_block;                            /* Only one block to be used             */
+//    servBlock.blockList = _blockList;
+//	for(uint8_t i = 0;i<num_block;i++){
+//		_blockList[i].conf = RFAL_NFCF_BLOCKLISTELEM_LEN_BIT;
+//		_blockList[i].blockNum = blockList[i];
+//	}
+//
+//    rfalFieldOff();
+//	rfalNfcfPollerInitialize( RFAL_BR_212 ); /* Initialize for NFC-F */
+//	rfalFieldOnAndStartGT();                 /* Turns the Field On if not already and start GT timer */
+//
+//	err = rfalNfcfPollerCheckPresence();
+//	if( err == ERR_NONE)
+//	{
+//		err = rfalNfcfPollerCollisionResolution( RFAL_COMPLIANCE_MODE_NFC, 1, &nfcfDev, &devCnt );
+//		if( (err == ERR_NONE) && (devCnt > 0))
+//		{
+//			if(memcmp(idm,nfcfDev.sensfRes.NFCID2,8)){
+//				return RFAL_ERR_TIMEOUT;
+//			}
+//			err = rfalNfcfPollerCheck(idm, &servBlock, buf, sizeof(buf), &rcvLen);
+//			if(err == ERR_NONE){
+//				//DECRYPT_ACCESSCODE(buf+1);
+//				//CDC_Transmit(0, buf+1,  16);
+//				for(uint8_t i = 0;i<num_block;i++){
+//					memcpy(blockdata[i],&buf[1 + (16*i)],16);
+//				}
+//				rfalFieldOff();
+//				return err;
+//			}
+//		}
+//
+//	}
+//	rfalFieldOff();
+//	return RFAL_ERR_TIMEOUT;
+//}
 
 //ReturnCode nfcfReadBlock(uint8_t *idm,uint16_t *serviceList ,uint8_t num_block,uint8_t *blockList ,uint8_t blockdata[4][16])
 //{
@@ -545,27 +637,27 @@ ReturnCode nfcfReadBlock(uint8_t *idm,uint16_t *serviceList ,uint8_t num_block,u
 //    return err;
 //}
 
-ReturnCode nfcfWriteSingleBlock(uint8_t *idm, uint8_t num_service,uint16_t *serviceList ,uint16_t *blockList,uint8_t *blockdata)
-{
-    rfalNfcfServBlockListParam servBlock;
-    rfalNfcfBlockListElem _blockList[4];
-    uint8_t buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (3*RFAL_NFCF_BLOCK_LEN)) ];
-
-    servBlock.numServ   = num_service;
-    servBlock.servList  = serviceList;
-    servBlock.numBlock  = 1;
-    servBlock.blockList = _blockList;
-	_blockList[0].conf = RFAL_NFCF_BLOCKLISTELEM_LEN_BIT;
-	_blockList[0].blockNum = blockList[0];
-
-    ReturnCode err = rfalNfcfPollerUpdate(idm, &servBlock, buf, sizeof(buf), blockdata, buf, sizeof(buf));
-
-//    platformLog(" Write Block: %s Data: %s \r\n",
-//               (err != ERR_NONE) ? "FAIL" : "OK",
-//               (err != ERR_NONE) ? "" : hex2Str(wrData, RFAL_NFCF_BLOCK_LEN));
-
-    return err;
-}
+//ReturnCode nfcfWriteSingleBlock(uint8_t *idm, uint8_t num_service,uint16_t *serviceList ,uint16_t *blockList,uint8_t *blockdata)
+//{
+//    rfalNfcfServBlockListParam servBlock;
+//    rfalNfcfBlockListElem _blockList[4];
+//    uint8_t buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (3*RFAL_NFCF_BLOCK_LEN)) ];
+//
+//    servBlock.numServ   = num_service;
+//    servBlock.servList  = serviceList;
+//    servBlock.numBlock  = 1;
+//    servBlock.blockList = _blockList;
+//	_blockList[0].conf = RFAL_NFCF_BLOCKLISTELEM_LEN_BIT;
+//	_blockList[0].blockNum = blockList[0];
+//
+//    ReturnCode err = rfalNfcfPollerUpdate(idm, &servBlock, buf, sizeof(buf), blockdata, buf, sizeof(buf));
+//
+////    platformLog(" Write Block: %s Data: %s \r\n",
+////               (err != ERR_NONE) ? "FAIL" : "OK",
+////               (err != ERR_NONE) ? "" : hex2Str(wrData, RFAL_NFCF_BLOCK_LEN));
+//
+//    return err;
+//}
 
 //void demoNfcv(void)
 //{
@@ -626,8 +718,9 @@ ReturnCode nfcvWriteBlock(rfalNfcvListenDevice *device, uint8_t blockNum, uint8_
 
 ReturnCode mifareAuthenticate(uint8_t keyType, uint8_t sector, uint8_t* uid, uint32_t uidLen, uint8_t* key)
 {
-    const uint32_t nonce = 0x94857192;
-    ReturnCode err = mccAuthenticate(keyType, sector, uid, uidLen, key, nonce);
+//    const uint32_t nonce = 0x94857192;
+//    ReturnCode err = mccAuthenticate(keyType, sector, uid, uidLen, key, nonce);
+    ReturnCode err = mccAuthenticate(keyType, sector, uid, uidLen, key, rng_get32());
     if(err != ERR_NONE) {
         //platformLog("Authentication failed:%04X\r\n",err);
 //        mccDeinitialise(true);
@@ -685,7 +778,7 @@ ReturnCode IsoDepBlockingTxRx( rfalIsoDepDevice *isoDepDev, const uint8_t *txBuf
 
 
   /* Copy data to send */
-  ST_MEMMOVE( gTxBuf.isoDepTxBuf.apdu, txBuf, MIN( txBufSize, RFAL_ISODEP_DEFAULT_FSC ) );
+  memmove( gTxBuf.isoDepTxBuf.apdu, txBuf, MIN( txBufSize, RFAL_ISODEP_DEFAULT_FSC ) );
 
   /* Perform the ISO-DEP Transceive in a blocking way */
   rfalIsoDepStartApduTransceive( isoDepTxRx );
@@ -702,7 +795,40 @@ ReturnCode IsoDepBlockingTxRx( rfalIsoDepDevice *isoDepDev, const uint8_t *txBuf
   }
 
   /* Copy received data */
-  ST_MEMMOVE( rxBuf, isoDepTxRx.rxBuf->apdu, MIN(*rxActLen, rxBufSize) );
+  memmove( rxBuf, isoDepTxRx.rxBuf->apdu, MIN(*rxActLen, rxBufSize) );
   return ERR_NONE;
+}
+
+static uint32_t rng_state = 0;
+
+void rng_init(void)
+{
+    /* 利用 SRAM 上电态 + SysTick 作为扰动 */
+    rng_state = 0xA5A5A5A5u ^ (uint32_t)&rng_state;
+
+    /* 如果 SysTick 已启用，用当前计数器再搅一次 */
+    if (SysTick->CTRL & SysTick_CTRL_ENABLE_Msk)
+    {
+        rng_state ^= SysTick->VAL;
+    }
+
+    /* 防止为 0（xorshift 不能是 0） */
+    if (rng_state == 0)
+    {
+        rng_state = 0x1u;
+    }
+}
+
+static uint32_t rng_get32(void)
+{
+    uint32_t x = rng_state;
+
+    /* xorshift32 */
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+
+    rng_state = x;
+    return x;
 }
 

@@ -42,7 +42,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define FIRMWARE_VISION 0xf
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -104,6 +104,7 @@ int main(void)
   MX_X_CUBE_NFC6_Init();
   /* USER CODE BEGIN 2 */
   MX_USB_DEVICE_Init();
+  LED_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,40 +123,11 @@ int main(void)
 	  Reader_UART_Init();
 	  Reader.Current_Interface = INTERFACE_NONE;
 	  Reader.Current_Mode = MODE_IDLE;
-	  HAL_Delay(500);
-//	  if( !demoIni() )
-//	    {
-//	      platformLog("Read RFID failed..\r\n");
-//	      while(1)
-//	      {
-//	        platformDelay(100);
-//	      }
-//	    }
-//	    else
-//	    {
-//	      platformLog("Read RFID succeeded..\r\n");
-//	      for (int i = 0; i < 6; i++)
-//	      {
-//	        platformDelay(200);
-//	      }
-//	    }
-	  //uint8_t error = st25r3916Initialize();
+	  HAL_Delay(1000);
+	  LED_show(0,0,0);
 	  while(1){
-//		  felica_poll();
-//		  NFCV_Poll();
-//		  demoPollNFCA();
-//		  for(uint8_t i = 0;i<4;i++){
-//			  LED_set(i,255,0,255);
-//		  }
-//		  LED_refresh();
-//		  uint8_t keyboard_buffer[10] = {0,0,0x58,0x5F,0x5C,0x59,0,0,0,0};
-//		  		USBD_CUSTOM_HID_SendReport(&hUsbDevice,keyboard_buffer, 10);
-
-//		  demoNfcf();
-
 		  Card_Poll();
 		  Mode_Poll();
-		  //Normal_Poll();
 	  }
 
   }

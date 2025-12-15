@@ -1,6 +1,0 @@
-../X-CUBE-NFC6/Target/demo_ce.c:173:13:cmdCompare	3
-../X-CUBE-NFC6/Target/demo_ce.c:344:17:demoCeT3TCheck	13
-../X-CUBE-NFC6/Target/demo_ce.c:461:17:demoCeT3TUpdate	11
-../X-CUBE-NFC6/Target/demo_ce.c:566:6:demoCeInit	3
-../X-CUBE-NFC6/Target/demo_ce.c:601:10:demoCeT4T	21
-../X-CUBE-NFC6/Target/demo_ce.c:650:10:demoCeT3T	7

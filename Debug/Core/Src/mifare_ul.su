@@ -1,2 +1,0 @@
-../Core/Src/mifare_ul.c:63:12:mifareUlReadNBytes	72	static
-../Core/Src/mifare_ul.c:119:12:mifareUlWritePage	48	static

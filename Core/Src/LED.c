@@ -9,8 +9,8 @@
 
 extern DMA_HandleTypeDef hdma_tim1_ch1;
 
-static uint8_t RGB_data[3 * NUM_LED] = {0xff};
-static uint32_t RGB_data_DMA_buffer[64 + NUM_LED * 24 + 64] = {WS2812_HIGH + WS2812_LOW};
+static uint8_t RGB_data[3 * NUM_LED];
+static uint16_t RGB_data_DMA_buffer[64 + NUM_LED * 24 + 64];
 
 const uint8_t gamma8[256] = {
   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,
@@ -30,6 +30,15 @@ const uint8_t gamma8[256] = {
 203, 204, 206, 208, 209, 211, 212, 214, 216, 217, 219, 221, 222, 224, 225, 227,
 229, 231, 232, 234, 236, 237, 239, 241, 242, 244, 246, 248, 249, 251, 253, 255
 };
+
+void LED_Init(){
+	for(uint8_t i = 0;i<3 * NUM_LED;i++){
+		RGB_data[i] = 0;
+	}
+	for(uint16_t i = 0;i<64 + NUM_LED * 24 + 64;i++){
+		RGB_data_DMA_buffer[i] = 0;
+	}
+}
 
 void LED_set(uint8_t led_no,uint8_t r,uint8_t g,uint8_t b){
 	if(led_no >= NUM_LED){
@@ -58,7 +67,7 @@ void LED_refresh()
 		}
 	}
 	//__HAL_DMA_DISABLE_IT(&hdma_tim1_ch1, DMA_IT_HT);
-	HAL_TIM_PWM_Start_DMA(WS2812_TIM_HANDLE, WS2812_TIM_CH, (uint32_t *)RGB_data_DMA_buffer, NUM_LED * 2 * 24 + 64 + 64);
+	HAL_TIM_PWM_Start_DMA(WS2812_TIM_HANDLE, WS2812_TIM_CH, (uint32_t *)RGB_data_DMA_buffer, NUM_LED * 24 + 64 + 64);
 }
 
 //void LED_show(uint8_t r,uint8_t g,uint8_t b){

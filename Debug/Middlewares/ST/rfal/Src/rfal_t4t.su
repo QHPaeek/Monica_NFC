@@ -1,9 +1,0 @@
-../Middlewares/ST/rfal/Src/rfal_t4t.c:78:12:rfalT4TPollerComposeCAPDU	8	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:147:12:rfalT4TPollerParseRAPDU	0	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:173:12:rfalT4TPollerComposeSelectAppl	32	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:205:12:rfalT4TPollerComposeSelectFile	32	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:237:12:rfalT4TPollerComposeSelectFileV1Mapping	32	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:269:12:rfalT4TPollerComposeReadData	40	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:292:12:rfalT4TPollerComposeReadDataODO	24	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:323:12:rfalT4TPollerComposeWriteData	40	static
-../Middlewares/ST/rfal/Src/rfal_t4t.c:356:12:rfalT4TPollerComposeWriteDataODO	40	static

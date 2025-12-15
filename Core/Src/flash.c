@@ -21,7 +21,7 @@
 
 FlashData Flash;
 
-const uint8_t default_setting[5] = {0xf0,0xff,0xfe,0xfe,0xfe};
+const uint8_t default_setting[5] = {0xf0,0xff,0xfe,0x7f,0xfe};
 
 void flash_write(uint32_t data[4]) {
     HAL_FLASH_Unlock();
