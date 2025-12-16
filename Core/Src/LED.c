@@ -10,7 +10,7 @@
 extern DMA_HandleTypeDef hdma_tim1_ch1;
 
 static uint8_t RGB_data[3 * NUM_LED];
-static uint16_t RGB_data_DMA_buffer[64 + NUM_LED * 24 + 64];
+static uint8_t RGB_data_DMA_buffer[64 + NUM_LED * 24 + 64];
 
 const uint8_t gamma8[256] = {
   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,

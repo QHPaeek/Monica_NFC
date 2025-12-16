@@ -109,15 +109,15 @@ void spice_iso15693_process(){
 //}
 
 void spice_request(uint8_t spice_mode_detect_flag){
-	if(spice_mode_detect_flag){
-		if(Flash.spice_setting & SYSTEM_IIDX_2P){
-			Interface_Send((const uint8_t*)spice_light_cmd_IIDX_P2,122);
-		}else{
-			Interface_Send((const uint8_t*)spice_light_cmd_IIDX_P1,122);
-		}
-	}else{
-		Interface_Send((const uint8_t*)spice_light_cmd,113);
-	}
+//	if(spice_mode_detect_flag){
+//		if(Flash.spice_setting & SYSTEM_IIDX_2P){
+//			Interface_Send((const uint8_t*)spice_light_cmd_IIDX_P2,122);
+//		}else{
+//			Interface_Send((const uint8_t*)spice_light_cmd_IIDX_P1,122);
+//		}
+//	}else{
+//		Interface_Send((const uint8_t*)spice_light_cmd,113);
+//	}
 }
 
 uint8_t spice_request_check(uint8_t* data,uint8_t len){

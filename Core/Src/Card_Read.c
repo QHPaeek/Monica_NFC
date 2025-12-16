@@ -48,10 +48,45 @@ void mifare_pre_read(){
 	mccInitialize();
 	Card.mifare_auth_status = 0;
 	if(!auth_flag){
+		auth_flag ++;
 		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)AimeKey) != RFAL_ERR_NONE){
 
 		}else{
 			memcpy(Card.mifare_right_key_a,AimeKey,6);
+//			Card.mifare_auth_status |= Auth_KeyA_Right;
+			Card.mifare_auth_status = Auth_ALL_Right;
+		}
+		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, (uint8_t *)AimeKey) != RFAL_ERR_NONE){
+			memcpy(Card.mifare_right_key_b,AimeKey,6);
+			Card.mifare_auth_status |= Auth_KeyB_Right;
+		}else{
+			memcpy(Card.mifare_right_key_b,AimeKey,6);
+			Card.mifare_auth_status |= Auth_KeyB_Right;
+		}
+
+		goto read2;
+	}else if(auth_flag == 1){
+		auth_flag ++;
+		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_A) != RFAL_ERR_NONE){
+
+		}else{
+			memcpy(Card.mifare_right_key_a,BanaKey_A,6);
+			Card.mifare_auth_status |= Auth_KeyA_Right;
+//			Card.mifare_auth_status = Auth_ALL_Right;
+		}
+		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_B) != RFAL_ERR_NONE){
+
+		}else{
+			memcpy(Card.mifare_right_key_b,BanaKey_B,6);
+			Card.mifare_auth_status |= Auth_KeyB_Right;
+		}
+		goto read1;
+	}else if(auth_flag == 2){
+		auth_flag ++;
+		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_A) != RFAL_ERR_NONE){
+
+		}else{
+			memcpy(Card.mifare_right_key_a,BanaKey_A,6);
 			Card.mifare_auth_status |= Auth_KeyA_Right;
 		}
 		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, (uint8_t *)AimeKey) != RFAL_ERR_NONE){
@@ -59,27 +94,13 @@ void mifare_pre_read(){
 		}else{
 			memcpy(Card.mifare_right_key_b,AimeKey,6);
 			Card.mifare_auth_status |= Auth_KeyB_Right;
+
 		}
-		auth_flag ++;
-		goto read2;
-	}else if(auth_flag == 1){
-		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_A) != RFAL_ERR_NONE){
-			//platformLog("banakey a fail\r\n");
-		}else{
-			//platformLog("banakey a success\r\n");
-			memcpy(Card.mifare_right_key_a,BanaKey_A,6);
-			Card.mifare_auth_status |= Auth_KeyA_Right;
-		}
-		if(mifareAuthenticate(MCC_AUTH_KEY_B, 0, Card.iso14443_uid4, 4, (uint8_t *)BanaKey_B) != RFAL_ERR_NONE){
-		}else{
-			memcpy(Card.mifare_right_key_b,BanaKey_B,6);
-			Card.mifare_auth_status |= Auth_KeyB_Right;
-		}
-		auth_flag ++;
 		goto read1;
 	}else{
 		if(mifareAuthenticate(MCC_AUTH_KEY_A, 0, Card.iso14443_uid4, 4, (uint8_t *)JubeatKey) != RFAL_ERR_NONE){
-
+//			Card.mifare_auth_status = Auth_ALL_Failed;
+//			goto end;
 		}else{
 			memcpy(Card.mifare_right_key_a,JubeatKey,6);
 			memset(Card.mifare_right_key_b,0xff,6);
@@ -94,6 +115,7 @@ read1:
 		for(uint8_t i = 1;i<3;i++){
 			mifareReadBlock(0, i, tmp, 18);
 			memcpy(Card.mifare_data[i], tmp, 16);
+//			CDC_Transmit(0, tmp, 16);
 		}
 		uint8_t zero[10] = {0,0,0,0,0,0,0,0,0,0};
 		if(memcmp(Card.mifare_data[2] + 6,zero,10) == 0){
@@ -112,11 +134,7 @@ read2:
 		for(uint8_t i = 2;i>0;i--){
 			mifareReadBlock(0, i, tmp, 18);
 			memcpy(Card.mifare_data[i], tmp, 16);
-//			platformLog(" Read block %d:");
-//			for (int i = 0; i < 16; i++) {
-//				platformLog("%02X ", Card.mifare_data[i]); // 两位大写16进制，不足补零
-//			}
-//			platformLog("\r\n");
+//			CDC_Transmit(0, tmp, 16);
 		}
 		uint8_t zero[10] = {0,0,0,0,0,0,0,0,0,0};
 		if(memcmp(Card.mifare_data[2] + 6,zero,10) == 0){
