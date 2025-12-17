@@ -488,9 +488,9 @@ uint8_t CDC_Transmit(uint8_t ch, uint8_t *Buf, uint16_t Len)
   extern USBD_CDC_ACM_HandleTypeDef CDC_ACM_Class_Data[];
   USBD_CDC_ACM_HandleTypeDef *hcdc = NULL;
   hcdc = &CDC_ACM_Class_Data[ch];
-  if (hcdc->TxState != 0)
+  while (hcdc->TxState != 0)
   {
-    return USBD_BUSY;
+//    return USBD_BUSY;
   }
   USBD_CDC_SetTxBuffer(ch, &hUsbDevice, Buf, Len);
   result = USBD_CDC_TransmitPacket(ch, &hUsbDevice);

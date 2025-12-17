@@ -21,6 +21,7 @@ uint8_t *sega_write_buffer = Card.operation_tmp;;
 uint8_t sega_current_mifare_key_a[6];
 uint8_t sega_current_mifare_key_b[6];
 uint8_t sega_systemcode[2] = {0x88,0xb4};
+uint8_t test_no = 1;
 
 //uint8_t sega_access_aime[4] = {0x70,0xf8,0x78,0x11};
 extern uint8_t auth_flag;
@@ -73,6 +74,12 @@ uint8_t sega_packet_check(uint8_t* data,uint8_t len) {
 }
 
 void sega_packet_write() {
+//if(test_no != req.seq_no){
+//	LED_show(128,0,0);
+//}else{
+////	LED_show(128,0,0);
+//	test_no++;
+//}
   uint8_t checksum = 0, len = 0;
   if (res.cmd == 0) {
     return;
@@ -111,7 +118,8 @@ void res_clear(uint8_t payload_len) {
 
 void sys_to_normal_mode() {
 	res_clear(0);
-	res.seq_no = 0;
+	res.status = 0x03;
+	//res.seq_no = 0;
 }
 
 void sys_get_fw_version() {

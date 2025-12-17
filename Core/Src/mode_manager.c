@@ -173,7 +173,7 @@ void Reader_Uart_SendCommand(uint8_t* data, uint8_t len){
 
 void Reader_CDC_SendCommand(uint8_t* data, uint8_t len){
 	if(len == 64 && len == 128){
-		len++;
+		len--;
 	}
 	CDC_Transmit(0, data, len);
 }
