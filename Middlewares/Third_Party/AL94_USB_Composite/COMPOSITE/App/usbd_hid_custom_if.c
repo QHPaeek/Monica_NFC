@@ -238,8 +238,7 @@ static int8_t CUSTOM_HID_DeInit(void)
 static int8_t CUSTOM_HID_OutEvent(uint8_t event_idx, uint8_t state)
 {
   /* USER CODE BEGIN 6 */
-//	static uint8_t buffer[10] = {0,0,0,0,0,0,0,0,0,0};
-//  CDC_Transmit(0, buffer, 10);
+
   //USBD_CUSTOM_HID_SendReport(&hUsbDevice, (uint8_t *)buffer, 0x40);
   return (USBD_OK);
   /* USER CODE END 6 */

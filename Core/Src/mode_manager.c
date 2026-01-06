@@ -148,7 +148,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         }
         __HAL_UART_CLEAR_FEFLAG(huart);
         __HAL_UART_CLEAR_OREFLAG(huart);
-        while(HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255) != HAL_OK);
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255);
          __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
     }
 }
@@ -209,9 +209,18 @@ void Reader_CDC_IRQHandler(uint8_t* data, uint8_t len){
 				break;
 		}
 	}
-	if(Reader.Current_Mode == MODE_IDLE){
+	if(Reader.Current_Interface == MODE_IDLE){
 		Reader.Current_Interface = INTERFACE_NONE;
 	}
+}
+
+void Reader_HID_IRQHandler(uint8_t* data){
+	if(Reader.Current_Interface == MODE_IDLE){
+		Reader.Current_Interface = INTERFACE_HID;
+		Reader.Current_Mode = MODE_CARD_IO;
+	}
+	LED_show(data[1],data[2],data[3]);
+	CDC_Transmit(0, data, 0x04);
 }
 
 void Reader_Uart_SendCommand(uint8_t* data, uint8_t len){

@@ -246,6 +246,7 @@ void Card_Poll()
 						memcpy(Card.iso14443_uid7,nfcaDev.nfcId1,7);
 						mifare_ul_read();
 			        	switch(Reader.Current_Mode){
+			        		case MODE_CARD_IO:
 							case MODE_IDLE:{
 								uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
 								memcpy(data+5,Card.iso14443_uid7,4);
@@ -271,6 +272,7 @@ void Card_Poll()
 //					}
 		        	Card.type = Card_Type_Mifare_Classic;
 		        	switch(Reader.Current_Mode){
+		        		case MODE_CARD_IO:
 		        		case MODE_IDLE:{
 							uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
 							memcpy(data+5,Card.iso14443_uid4,4);
@@ -305,6 +307,7 @@ void Card_Poll()
 	    		  Card.type = Card_Type_ISO14443A_T_Union;
 	    		  memcpy(Card.t_union_uid,nfcaDev.nfcId1,4);
 	    		  switch(Reader.Current_Mode){
+	    		  	  case MODE_CARD_IO:
 	    		  	  case MODE_IDLE:{
 						uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
 						memcpy(data+5,Card.t_union_uid,4);
@@ -355,6 +358,7 @@ void Card_Poll()
 //			nfcfReadBlock_8080();
 
         	switch(Reader.Current_Mode){
+        		case MODE_CARD_IO:
         		case MODE_IDLE:
         			LED_show(0,0,255);
         			uint8_t data[9];
@@ -397,6 +401,7 @@ void Card_Poll()
     		case MODE_SPICE_API:
     			spice_iso15693_process();
     			break;
+    		case MODE_CARD_IO:
     		case MODE_IDLE:{
     			uint8_t data[9];
     			data[0] = 1;
