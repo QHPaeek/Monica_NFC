@@ -38,7 +38,7 @@ enum{
 	INTERFACE_HID = 0X03,
 };
 
-void Reader_UART_IRQHandler();
+void Reader_UART_IRQHandler(uint16_t Size);
 void Reader_CDC_IRQHandler(uint8_t* data, uint8_t len);
 bool Interface_Send(const uint8_t* data ,uint8_t len);
 

@@ -78,23 +78,23 @@ enum {
   STATUS_COMP_DUMMY_3RD = 0x20,
 };
 
-typedef union {
-  uint8_t bytes[128];
+typedef union{
+	uint8_t bytes[128];
   struct {
-    uint8_t frame_len;
-    uint8_t addr;
-    uint8_t seq_no;
-    uint8_t cmd;
-    uint8_t payload_len;
+	uint8_t frame_len;
+	uint8_t addr;
+	uint8_t seq_no;
+	uint8_t cmd;
+	uint8_t payload_len;
     union {
-      uint8_t mode;
-      uint8_t key[6];            // CMD_MIFARE_KEY_SET
-      uint8_t color_payload[3];  // CMD_EXT_BOARD_LED_RGB
-      struct {
-        uint8_t eeprom_data[2];     //系统内部设置
-        uint8_t mapped_IDm[8];
-        uint8_t target_accesscode[10];
-      };
+		uint8_t mode;
+		uint8_t key[6];            // CMD_MIFARE_KEY_SET
+		uint8_t color_payload[3];  // CMD_EXT_BOARD_LED_RGB
+		struct {
+		uint8_t eeprom_data[2];     //系统内部设置
+		uint8_t mapped_IDm[8];
+		uint8_t target_accesscode[10];
+		};
       struct {                   // CMD_CARD_SELECT,AUTHORIZE,READ
         uint8_t uid[4];
         uint8_t block_no;
@@ -130,7 +130,7 @@ typedef union {
   };
 } packet_request_t;
 
-typedef union {
+typedef union{
   uint8_t bytes[128];
   struct {
     uint8_t frame_len;

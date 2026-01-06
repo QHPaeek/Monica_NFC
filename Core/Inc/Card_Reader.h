@@ -107,5 +107,6 @@ ReturnCode IsoDepBlockingTxRx( rfalIsoDepDevice *isoDepDev, const uint8_t *txBuf
 uint8_t APDU_check_response(uint8_t *data,uint16_t len);
 bool T_Union_Read();
 static uint32_t rng_get32(void);
+ReturnCode nfcfReadBlock_8080();
 
 #endif /* INC_CARD_READER_H_ */

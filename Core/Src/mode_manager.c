@@ -16,6 +16,7 @@ extern TIM_HandleTypeDef htim17;
 
 extern uint8_t spice_mode_detect_flag;
 Machine Reader;
+uint8_t UART_FrameError = 0;
 //uint8_t mode_probe_flag[2] = {0,0};
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
@@ -28,19 +29,42 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void Mode_Poll(){
+	if(UART_FrameError > 1){
+		uint32_t baud = huart1.Init.BaudRate;
+		switch (baud){
+			case 115200:
+				__HAL_UART_DISABLE(&huart1);
+				huart1.Init.BaudRate = 38400;
+				if (HAL_UART_Init(&huart1) != HAL_OK){
+					Error_Handler();
+				}
+				__HAL_UART_ENABLE(&huart1);
+				HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255);
+				__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+				break;
+			default:{
+				__HAL_UART_DISABLE(&huart1);
+				huart1.Init.BaudRate = 115200;
+				if (HAL_UART_Init(&huart1) != HAL_OK){
+					Error_Handler();
+				}
+				__HAL_UART_ENABLE(&huart1);
+				HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255);
+				__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+				break;
+			}
+		}
+		UART_FrameError = 0;
+	}
 	if(Reader.Current_Mode != MODE_IDLE){
 		return;
 	}
 	if(Reader.Current_Interface == INTERFACE_NONE){
-//		if(spice_mode_detect_flag){
-//			spice_mode_detect_flag = 0;
-//		}else{
-//			spice_mode_detect_flag ++;
-//		}
-		Reader.Current_Interface = INTERFACE_CDC;
-		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
-		Reader.Current_Interface = INTERFACE_UART;
-		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
+//		Reader.Current_Interface = INTERFACE_CDC;
+//		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
+//		Reader.Current_Interface = INTERFACE_UART;
+//		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
+
 		Reader.Current_Interface = INTERFACE_NONE;
 	}
 }
@@ -71,7 +95,7 @@ uint8_t Mode_Detect(uint8_t* data,uint8_t len){
 }
 
 void Reader_UART_Init(){
-	uint8_t Uart_Parameter = Flash.system_setting && 0b1111;
+	uint8_t Uart_Parameter = Flash.system_setting & 0b1111;
 	switch (Uart_Parameter){
 		case 0:
 			break;
@@ -82,6 +106,7 @@ void Reader_UART_Init(){
 				Error_Handler();
 			}
 			__HAL_UART_ENABLE(&huart1);
+			break;
 		}
 		case 2:{
 			__HAL_UART_DISABLE(&huart1);
@@ -90,49 +115,71 @@ void Reader_UART_Init(){
 				Error_Handler();
 			}
 			__HAL_UART_ENABLE(&huart1);
+			break;
 		}
 	}
-	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
-	HAL_UART_Receive_DMA(&huart1, Reader.Uart_Buffer_Receive, 256);
+//	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+//	HAL_UART_Receive_DMA(&huart1, Reader.Uart_Buffer_Receive, 256);
+//	__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+	while(HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255) != HAL_OK);
 	__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
-
-	uint8_t data = 1;
-	HAL_UART_Transmit_DMA(&huart1, &data, 1);
 }
 
-void Reader_UART_IRQHandler(){
-	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE)){
-		__HAL_UART_CLEAR_IDLEFLAG(&huart1);
-		HAL_UART_DMAStop(&huart1);
-		if(Reader.Current_Interface == INTERFACE_NONE){
-			Reader.Current_Interface = INTERFACE_UART;
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    if ((huart->Instance == USART1) && (HAL_UARTEx_GetRxEventType(huart) == 2))
+    {
+    	platformLedToogle(PLATFORM_LED_AP2P_PORT, PLATFORM_LED_AP2P_PIN);
+//        HAL_UART_DMAStop(&huart1);
+        Reader_UART_IRQHandler(Size);
+		while(HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255) != HAL_OK);
+        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+    	platformLedOn(PLATFORM_LED_B_PORT, PLATFORM_LED_B_PIN);
+        if (huart->ErrorCode & HAL_UART_ERROR_FE)
+        {
+        	UART_FrameError++;
+        }
+        __HAL_UART_CLEAR_FEFLAG(huart);
+        __HAL_UART_CLEAR_OREFLAG(huart);
+        while(HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255) != HAL_OK);
+         __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+    }
+}
+
+
+void Reader_UART_IRQHandler(uint16_t Size){
+	if(Reader.Current_Interface == INTERFACE_NONE){
+		Reader.Current_Interface = INTERFACE_UART;
+	}
+	if(Reader.Current_Interface == INTERFACE_UART){
+		switch(Reader.Current_Mode){
+			case MODE_IDLE:
+				Reader.Current_Mode = Mode_Detect(Reader.Uart_Buffer_Receive,Size);
+				break;
+			case MODE_SEGA_SERIAL:
+				Sega_Mode_Loop(sega_packet_check(Reader.Uart_Buffer_Receive,Size));
+				break;
+			case MODE_SPICE_API:
+				spice_request_check(Reader.Uart_Buffer_Receive,Size);
+				break;
+			case MODE_NAMCO_SERIAL:
+				namco_packet_process(namco_packet_check(Reader.Uart_Buffer_Receive,Size));
+				break;
+			case MODE_AIME_IO:
+				AimeIO_process(AimeIO_packet_check(Reader.Uart_Buffer_Receive,Size));
+				break;
+			default:
+				break;
 		}
-		if(Reader.Current_Interface == INTERFACE_UART){
-			switch(Reader.Current_Mode){
-				case MODE_IDLE:
-					Reader.Current_Mode = Mode_Detect(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx));
-					break;
-				case MODE_SEGA_SERIAL:
-					Sega_Mode_Loop(sega_packet_check(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx)));
-					break;
-				case MODE_SPICE_API:
-					spice_request_check(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx));
-					break;
-				case MODE_NAMCO_SERIAL:
-					namco_packet_process(namco_packet_check(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx)));
-					break;
-				case MODE_AIME_IO:
-					AimeIO_process(AimeIO_packet_check(Reader.Uart_Buffer_Receive,256 - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx)));
-					break;
-				default:
-					break;
-			}
-			if(Reader.Current_Mode == MODE_IDLE){
-				Reader.Current_Interface = INTERFACE_NONE;
-			}
-			HAL_UART_Receive_DMA(&huart1,Reader.Uart_Buffer_Receive,256);
-		}else{
-			HAL_UART_Receive_DMA(&huart1,Reader.Uart_Buffer_Receive,256);
+		if(Reader.Current_Mode == MODE_IDLE){
+			Reader.Current_Interface = INTERFACE_NONE;
 		}
 	}
 }
@@ -183,6 +230,7 @@ void Reader_HID_SendReport(uint8_t* data){
 }
 
 bool Interface_Send(const uint8_t* data ,uint8_t len){
+	UART_FrameError = 0;
 	switch(Reader.Current_Interface){
 		case INTERFACE_CDC:
 			Reader_CDC_SendCommand(data,len);

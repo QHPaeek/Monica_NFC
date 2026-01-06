@@ -258,30 +258,7 @@ void Card_Poll()
 			        	}
 					}
 					break;
-		        case 0x0004:{
-		        	memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
-		        	//platformLog("Detected: Mifare Classic 1K\n");
-		        	if(Card.type != Card_Type_Mifare_Classic){
-		        		memset(Card.data,0,128);
-		        	}
-		        	mifare_pre_read();
-//		        	if(Card.mifare_auth_status == Auth_ALL_Failed){
-//		        		goto no_card;
-//		        	}
-		        	Card.type = Card_Type_Mifare_Classic;
-		        	switch(Reader.Current_Mode){
-		        		case MODE_IDLE:{
-							uint8_t data[9] = {0x01,0xE0,0x04,0x01,0xAF};
-							memcpy(data+5,Card.iso14443_uid4,4);
-							USBD_CUSTOM_HID_SendReport(&hUsbDevice,data, 9);
-							break;
-						}
-		        		case MODE_SPICE_API:
-		        			spice_iso14443_process();
-		        			break;
-		        	}
-		        	break;
-		        }
+		        case 0x0004:
 		        case 0x0002:
 		        	memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
 		        	//platformLog("Detected: Mifare Classic 4K\n");
@@ -310,32 +287,12 @@ void Card_Poll()
 		/* Check if it is Topaz aka T1T */
 		else if( nfcaDev.type == RFAL_NFCA_T1T )
 		{
-			/********************************************/
-			/* NFC-A T1T card found                     */
-			/* NFCID/UID is contained in: t1tRidRes.uid */
-//			uint8_t tmp[128];
-//			sprintf(tmp,"ISO14443A/Topaz (NFC-A T1T) TAG found. UID: %s\r\n", hex2Str(nfcaDev.ridRes.uid, RFAL_T1T_UID_LEN));
-//			CDC_Transmit(0, tmp, strlen(tmp));
 			memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
 	    	Card.type = Card_Type_ISO14443A_Unknow;
 		}
 		/* Check if device supports P2P/NFC-DEP */
 		else if( (nfcaDev.type == RFAL_NFCA_NFCDEP) || (nfcaDev.type == RFAL_NFCA_T4T_NFCDEP))
 		{
-	        /* Continue with P2P Activation .... */
-
-//	        err = ActivateP2P( NFCID3, RFAL_NFCDEP_NFCID3_LEN, false, &gDevProto.nfcDepDev );
-//	        if (err == ERR_NONE)
-//	        {
-//	          /*********************************************/
-//	          /* Passive P2P device activated              */
-//	          //platformLog("NFCA Passive P2P device found. NFCID: %s\r\n", hex2Str(gDevProto.nfcDepDev.activation.Target.ATR_RES.NFCID3, RFAL_NFCDEP_NFCID3_LEN));
-//				uint8_t tmp[128];
-//				sprintf(tmp,"NFCA Passive P2P device found. NFCID: %s\r\n", hex2Str(gDevProto.nfcDepDev.activation.Target.ATR_RES.NFCID3, RFAL_NFCDEP_NFCID3_LEN));
-//				CDC_Transmit(0, tmp, strlen(tmp));
-//	          /* Send an URI record */
-//	          //demoSendNdefUri();
-//	        }
 			memcpy(Card.iso14443_uid4,nfcaDev.nfcId1,nfcaDev.nfcId1Len);
 			Card.type = Card_Type_ISO14443A_Unknow;
 	     }
@@ -395,6 +352,7 @@ void Card_Poll()
 //			CDC_Transmit(0, Card.felica_PMm,  16);
 //			rfalFieldOff();
 //			demoNfcf();
+//			nfcfReadBlock_8080();
 
         	switch(Reader.Current_Mode){
         		case MODE_IDLE:
@@ -571,6 +529,32 @@ uint8_t APDU_check_response(uint8_t *data,uint16_t len){
 //    }
 //}
 
+ReturnCode nfcfReadBlock_8080()
+{
+    ReturnCode                 err;
+    uint8_t                    buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*16)) ];
+    uint16_t                   rcvLen;
+//    rfalNfcfServ               srv = *serviceList;
+//    rfalNfcfServ               srv = 0x000b;
+    rfalNfcfServ               srv = 0x000b;
+    rfalNfcfBlockListElem _blockList[1];
+    rfalNfcfServBlockListParam servBlock;
+
+    servBlock.numServ   = 1;                            /* Only one Service to be used           */
+    servBlock.servList  = &srv;                         /* Service Code: NDEF is Read/Writeable  */
+    servBlock.numBlock  = 1;                            /* Only one block to be used             */
+    servBlock.blockList = _blockList;
+	_blockList[0].conf = 0x80;
+	_blockList[0].blockNum = 0x00;
+
+	err = rfalNfcfPollerCheck(Card.felica_IDm, &servBlock, buf, sizeof(buf), &rcvLen);
+	if(err == ERR_NONE){
+		//DECRYPT_ACCESSCODE(buf+1);
+		CDC_Transmit(0, buf,  (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*16)));
+		return err;
+	}
+	return RFAL_ERR_TIMEOUT;
+}
 
 //ReturnCode nfcfReadBlock(uint8_t *idm,uint16_t *serviceList ,uint8_t num_block,uint8_t *blockList ,uint8_t blockdata[4][16])
 //{

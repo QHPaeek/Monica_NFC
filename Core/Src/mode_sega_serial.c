@@ -31,7 +31,7 @@ uint8_t sega_packet_check(uint8_t* data,uint8_t len) {
 	uint8_t raw_pos = 0;
 	uint8_t req_pos = 1;
 	uint8_t checksum = 0;
-	while(raw_pos<len){
+	while(raw_pos < len){
 		if(data[raw_pos] == SERIAL_CMD_START){
 			req.frame_len = data[++raw_pos];
 			checksum += req.frame_len;
@@ -47,6 +47,7 @@ uint8_t sega_packet_check(uint8_t* data,uint8_t len) {
 		if (data[raw_pos] == 0xD0) {
 			escape = true;
 			raw_pos++;
+			continue;
 		}else if (escape) {
 			req.bytes[req_pos] = data[raw_pos] + 1;
 			checksum += req.bytes[req_pos];
@@ -63,10 +64,19 @@ uint8_t sega_packet_check(uint8_t* data,uint8_t len) {
 			return 0;
 		}
 	}
-	req.bytes[req_pos] = data[raw_pos];
+	uint8_t ret = 0;
+	if(data[raw_pos] == 0xd0){
+		if(checksum == (data[raw_pos + 1] + 1)){
+			ret = 1;
+		}
+	}else{
+		if(checksum == (data[raw_pos])){
+			ret = 1;
+		}
+	}
 	if (req.cmd == CMD_SEND_BINDATA_EXEC){
 		return CMD_SEND_BINDATA_EXEC;
-	}else if(checksum == req.bytes[req.frame_len]){
+	}else if(ret){
 		return req.cmd;
 	}else{
 		return STATUS_SUM_ERROR;
@@ -74,12 +84,6 @@ uint8_t sega_packet_check(uint8_t* data,uint8_t len) {
 }
 
 void sega_packet_write() {
-//if(test_no != req.seq_no){
-//	LED_show(128,0,0);
-//}else{
-////	LED_show(128,0,0);
-//	test_no++;
-//}
   uint8_t checksum = 0, len = 0;
   if (res.cmd == 0) {
     return;
@@ -123,41 +127,41 @@ void sys_to_normal_mode() {
 }
 
 void sys_get_fw_version() {
-	if(Flash.sega_setting & 1){
-		const char fw_version[24] = "TN32MSEC003S F/W Ver1.2";
+	if(Flash.sega_setting & SYSTEM_MODE_SEETING){
+		const char fw_version[2] = "\x94";
+		//char fw_version[2] = "\x92";
 		res_clear(sizeof(fw_version) - 1);
 		memcpy(res.version, fw_version, res.payload_len);
 	}
 	else{
-		const char fw_version[2] = "\x94";
-		//char fw_version[2] = "\x92";
+		const char fw_version[24] = "TN32MSEC003S F/W Ver1.2";
 		res_clear(sizeof(fw_version) - 1);
 		memcpy(res.version, fw_version, res.payload_len);
 	}
 }
 
 void sys_get_hw_version() {
-	if(Flash.sega_setting & 1){
-		const char hw_version[24] = "TN32MSEC003S H/W Ver3.0";
+	if(Flash.sega_setting & SYSTEM_MODE_SEETING){
+		const char hw_version[10] = "837-15396";
+		//char hw_version[10] = "837-15286";
 		res_clear(sizeof(hw_version) - 1);
 		memcpy(res.version, hw_version, res.payload_len);
 	}
 	else{
-		const char hw_version[10] = "837-15396";
-		//char hw_version[10] = "837-15286";
+		const char hw_version[24] = "TN32MSEC003S H/W Ver3.0";
 		res_clear(sizeof(hw_version) - 1);
 		memcpy(res.version, hw_version, res.payload_len);
 	}
 }
 
 void sys_get_led_info() {
-	if(Flash.sega_setting & 1){
-		const char led_info[10] = "15084\xFF\x10\x00\x12";
+	if(Flash.sega_setting & SYSTEM_MODE_SEETING){
+		const char led_info[13] = "000-00000\xFF\x11\x40";
 		res_clear(sizeof(led_info) - 1);
 		memcpy(res.version, led_info, res.payload_len);
 	}
 	else{
-		const char led_info[13] = "000-00000\xFF\x11\x40";
+		const char led_info[10] = "15084\xFF\x10\x00\x12";
 		res_clear(sizeof(led_info) - 1);
 		memcpy(res.version, led_info, res.payload_len);
 	}
@@ -415,11 +419,11 @@ void Sega_Mode_Loop(uint8_t cmd){
 
     // Card read
       case CMD_START_POLLING:
-    	Card.operation = Operation_idle;
-        nfc_start_polling();
+    	//Card.operation = Operation_idle;
+		res_clear(0);
         break;
       case CMD_STOP_POLLING:
-        nfc_stop_polling();
+		res_clear(0);
         break;
       case CMD_CARD_DETECT:
         nfc_card_detect();
