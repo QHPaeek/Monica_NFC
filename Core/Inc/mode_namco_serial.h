@@ -19,11 +19,11 @@
 
 #define PN532_MAX_DATA_LEN 64
 
-typedef union
+typedef struct
 {
-    uint8_t raw[128];
-
-    struct{
+	union{
+		uint8_t head[7];
+		struct{
         uint8_t preamble;
         uint8_t startCode1;
         uint8_t startCode2;
@@ -31,32 +31,34 @@ typedef union
         uint8_t lcs;
         uint8_t tfi;
         uint8_t cmd;
-        uint8_t data[PN532_MAX_DATA_LEN];
-        uint8_t dcs;
-        uint8_t postamble;
+		};
     };
+    uint8_t data[PN532_MAX_DATA_LEN];
+    uint8_t dcs;
+    uint8_t postamble;
 } PN532_Down_Frame;
 
-typedef union
+typedef struct
 {
-    uint8_t raw[128];
-    struct{
-		/* 固定帧头 */
-		uint8_t preamble;      // 0x00
-		uint8_t startCode1;    // 0x00
-		uint8_t startCode2;    // 0xFF
-		uint8_t len;           // TFI + CMD + DATA
-		uint8_t lcs;           // LEN 校验
+	union{
+		uint8_t head[7];
+		struct{
+			/* 固定帧头 */
+			uint8_t preamble;      // 0x00
+			uint8_t startCode1;    // 0x00
+			uint8_t startCode2;    // 0xFF
+			uint8_t len;           // TFI + CMD + DATA
+			uint8_t lcs;           // LEN 校验
 
-		uint8_t tfi;           // 0xD5
-		uint8_t cmd;           // CMD + 1
-		uint8_t data[PN532_MAX_DATA_LEN];
+			uint8_t tfi;           // 0xD5
+			uint8_t cmd;           // CMD + 1
+		};
+	};
+	uint8_t data[PN532_MAX_DATA_LEN];
+	uint8_t dcs;           // 数据校验
+	uint8_t postamble;     // 0x00
 
-		uint8_t dcs;           // 数据校验
-		uint8_t postamble;     // 0x00
-    };
-
-} PN532_Up_Frame;
+}PN532_Up_Frame;
 
 typedef enum {
     /* ---------- System Commands ---------- */
@@ -99,7 +101,8 @@ typedef enum {
     PN532_CMD_TG_RESPONSE_TO_INITIATOR   = 0x90,
 
 	/* */
-	PN532_CMD_DIAGNOSE = 0x18,
+	NAMCO_CMD_DIAGNOSE = 0x18,
+	NAMCO_CMD_READ_FELICA = 0xA0,
 
 } pn532_command_t;
 
@@ -121,12 +124,38 @@ typedef enum {
     FELICA_CMD_REQUEST_SYSTEM_CODE      = 0x0C,
 } felica_command_t;
 
+typedef enum
+{
+    LED_MODE_OFF = 0,
+    LED_MODE_GREEN_TO_BLUE,
+    LED_MODE_BLUE_BREATH,
+    LED_MODE_RGB_LOOP,
+    LED_MODE_RED_FALL,
+    LED_MODE_GREEN_BLUE_BLINK,
+    LED_MODE_RED_BLUE_KEEP,
+    LED_MODE_RED_YELLOW_BLINK,
+    LED_MODE_BLUE_KEEP
+} LedMode_t;
+
+typedef struct
+{
+    LedMode_t mode;
+    uint32_t  last_tick;
+    uint32_t  interval;
+    uint8_t   level;       // 亮度 / 渐变
+    uint8_t   sub_state;   // 子状态（颜色 / 方向）
+} LedCtrl_t;
+
+
 #define PN532_STATUS_OK              0x00
 #define PN532_STATUS_AUTH_ERROR      0x14
 #define PN532_STATUS_GENERIC_ERROR   0x01
 
 void pn532_in_data_exchange_proc(uint8_t *buf);
-bool PN532_SendResponse(const uint8_t *data, uint8_t data_len);
+bool PN532_SendResponse(const uint8_t *data, uint8_t data_len,uint8_t ack_flag);
 void pn532_rsp_list_passive_target(void);
+void namco_led_service(void);
+void led_set_mode(LedMode_t mode);
+void setLEDMode(uint8_t mode);
 
 #endif /* INC_MODE_NAMCO_SERIAL_H_ */

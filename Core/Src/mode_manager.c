@@ -25,6 +25,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
     		return;
     	}
+    	if(Reader.Current_Mode == MODE_NAMCO_SERIAL){
+    		namco_led_service();
+    	}
     }
 }
 
@@ -84,6 +87,7 @@ uint8_t Mode_Detect(uint8_t* data,uint8_t len){
 	test = namco_packet_check(data,len);
 	if(test){
 		namco_packet_process(test);
+		HAL_TIM_Base_Start_IT(&htim17);
 		return MODE_NAMCO_SERIAL;
 	}
 	test = AimeIO_packet_check(data,len);
@@ -220,7 +224,6 @@ void Reader_HID_IRQHandler(uint8_t* data){
 		Reader.Current_Mode = MODE_CARD_IO;
 	}
 	LED_show(data[1],data[2],data[3]);
-	CDC_Transmit(0, data, 0x04);
 }
 
 void Reader_Uart_SendCommand(uint8_t* data, uint8_t len){

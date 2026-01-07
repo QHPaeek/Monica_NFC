@@ -75,6 +75,7 @@ typedef struct{
 			uint8_t felica_IDm[8];
 			uint8_t felica_PMm[8];
 			uint8_t felica_systemcode[2];
+			uint8_t block_8000[16];
 		};
 		struct{					//Classic e_amusement_pass
 			uint8_t iso15693_uid[8];
@@ -107,6 +108,6 @@ ReturnCode IsoDepBlockingTxRx( rfalIsoDepDevice *isoDepDev, const uint8_t *txBuf
 uint8_t APDU_check_response(uint8_t *data,uint16_t len);
 bool T_Union_Read();
 static uint32_t rng_get32(void);
-ReturnCode nfcfReadBlock_8080();
+ReturnCode nfcfReadBlock_default();
 
 #endif /* INC_CARD_READER_H_ */

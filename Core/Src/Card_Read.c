@@ -355,7 +355,7 @@ void Card_Poll()
 //			CDC_Transmit(0, Card.felica_PMm,  16);
 //			rfalFieldOff();
 //			demoNfcf();
-//			nfcfReadBlock_8080();
+			nfcfReadBlock_default();
 
         	switch(Reader.Current_Mode){
         		case MODE_CARD_IO:
@@ -534,7 +534,7 @@ uint8_t APDU_check_response(uint8_t *data,uint16_t len){
 //    }
 //}
 
-ReturnCode nfcfReadBlock_8080()
+ReturnCode nfcfReadBlock_default()
 {
     ReturnCode                 err;
     uint8_t                    buf[ (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*16)) ];
@@ -555,7 +555,8 @@ ReturnCode nfcfReadBlock_8080()
 	err = rfalNfcfPollerCheck(Card.felica_IDm, &servBlock, buf, sizeof(buf), &rcvLen);
 	if(err == ERR_NONE){
 		//DECRYPT_ACCESSCODE(buf+1);
-		CDC_Transmit(0, buf,  (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*16)));
+//		CDC_Transmit(0, buf,  (RFAL_NFCF_NFCID2_LEN + RFAL_NFCF_CMD_LEN + (4*16)));
+		memcpy(Card.block_8000,buf+1,16);
 		return err;
 	}
 	return RFAL_ERR_TIMEOUT;

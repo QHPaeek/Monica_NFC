@@ -684,7 +684,6 @@ static uint8_t USBD_CUSTOM_HID_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
 
   /* USB data will be immediately processed, this allow next USB traffic being
   NAKed till the end of the application processing */
-  platformLedToogle(PLATFORM_LED_AP2P_PORT, PLATFORM_LED_AP2P_PIN);
   ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData_HID_Custom)->OutEvent(hhid->Report_buf[0], hhid->Report_buf[1]);
   Reader_HID_IRQHandler(hhid->Report_buf);
   USBD_LL_PrepareReceive(pdev,_CUSTOM_HID_OUT_EP ,hhid->Report_buf,USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
