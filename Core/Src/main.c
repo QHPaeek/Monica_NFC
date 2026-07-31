@@ -33,6 +33,8 @@
 #include "Card_Reader.h"
 #include "mode_manager.h"
 #include "flash.h"
+#include "dfu_jump.h"
+#include "LED.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +56,7 @@
 
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDevice;
+extern uint8_t dfu_flag;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -105,15 +108,19 @@ int main(void)
   /* USER CODE BEGIN 2 */
   MX_USB_DEVICE_Init();
   LED_Init();
+  HAL_Delay(500);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  LED_show(128,128,128);
   flash_read(Flash.raw_flash_byte);
-  if((Flash.system_setting >> 4) != FIRMWARE_VISION){
-	  memcpy(Flash.raw_flash_byte,default_setting,5);
+  if(Flash.firmversion_1 != FIRMWARE_VISION){
+	  memcpy(Flash.raw_flash_byte,default_setting,7);
   }
-  LED_show(255,255,255);
+  flash_write(Flash.raw_flash_word);
+  HAL_Delay(500);
+  LED_show(0,0,0);
   while (1)
   {
     /* USER CODE END WHILE */
@@ -128,6 +135,10 @@ int main(void)
 	  while(1){
 		  Card_Poll();
 		  Mode_Poll();
+		  if(dfu_flag){
+			  Jump_To_DFU_Bootloader();
+		  }
+		  HAL_Delay(10);
 	  }
 
   }

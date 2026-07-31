@@ -183,6 +183,7 @@ typedef union{
 
 extern packet_request_t req;
 extern packet_response_t res;
+extern uint8_t sega_reading_status;
 
 uint8_t sega_packet_check(uint8_t* data,uint8_t len);
 void Sega_Mode_Loop(uint8_t cmd);

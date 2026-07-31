@@ -75,7 +75,7 @@ uint8_t CUSTOM_HID_STR_DESC_IDX = _CUSTOM_HID_STR_DESC_IDX;
 /** @defgroup USBD_CUSTOM_HID_Private_Defines
   * @{
   */
-
+extern void Reader_HID_IRQHandler(uint8_t* data);
 /**
   * @}
   */

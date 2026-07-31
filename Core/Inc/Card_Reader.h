@@ -24,9 +24,9 @@ enum{
 	Card_Type_Mifare_UltraLight = 0x02,
 	Card_Type_Felica_AIC = 0x03,
 	Card_Type_Felica_Suica = 0x04,
-	Card_Type_ISO15693 = 0x05,
+	Card_Type_ICODE = 0x05,
 	Card_Type_ISO14443A_T_Union = 0x06,
-	Card_Type_Felica_Unknow= 0xfe,
+	Card_Type_Felica_Other= 0xfe,
 	Card_Type_ISO14443A_Unknow = 0xff,
 };
 
@@ -46,10 +46,10 @@ enum{
 typedef struct{
 	uint8_t type;
 	uint8_t operation;
+	uint8_t mifare_auth_status;
 	union{
 		uint8_t data[128];
 		struct{					//Classic Aime & BanaPass
-			uint8_t mifare_auth_status;
 			union{
 				uint8_t mifare_data[4][16];
 				struct{
@@ -76,9 +76,10 @@ typedef struct{
 			uint8_t felica_PMm[8];
 			uint8_t felica_systemcode[2];
 			uint8_t block_8000[16];
+			uint8_t felica_accesscode[16];
 		};
 		struct{					//Classic e_amusement_pass
-			uint8_t iso15693_uid[8];
+			uint8_t icode_uid[8];
 		};
 		struct{					//T-Union
 			uint8_t t_union_uid[4];
@@ -95,19 +96,25 @@ extern CardData Card;
 extern const uint8_t AimeKey[6];
 extern const uint8_t BanaKey_A[6];
 extern const uint8_t BanaKey_B[6];
+extern const uint8_t JubeatKey[6];
+extern const uint8_t EmptyKey[6];
 
 void Card_Poll();
 ReturnCode nfcfReadBlock(uint8_t *idm,uint16_t *serviceList ,uint8_t num_block,uint8_t *blockList ,uint8_t blockdata[4][16]);
 ReturnCode nfcfWriteSingleBlock(uint8_t *idm, uint8_t num_service,uint16_t *serviceList ,uint16_t *blockList,uint8_t *blockdata);
-ReturnCode nfcvReadBlock(rfalNfcvListenDevice *device, uint8_t blockNum, uint8_t *rxBuf, uint16_t bufSize, uint8_t *uid);
-ReturnCode nfcvWriteBlock(rfalNfcvListenDevice *device, uint8_t blockNum, uint8_t *wrData, uint16_t dataLen, uint8_t *uid);
+ReturnCode nfcvReadBlock(uint8_t *uid, uint8_t blockNum, uint8_t *rxBuf, uint16_t bufSize);
+ReturnCode nfcvWriteBlock(uint8_t *uid, uint8_t blockNum, uint8_t *wrData, uint16_t dataLen);
 ReturnCode mifareAuthenticate(uint8_t keyType, uint8_t sector, uint8_t* uid, uint32_t uidLen, uint8_t* key);
 ReturnCode mifareReadBlock(uint8_t sector, uint8_t block, uint8_t* buffer, uint16_t bufSize);
+ReturnCode mifareWriteBlock(uint8_t sector, uint8_t blockNum, uint8_t *buff);
 ReturnCode ActivateP2P( uint8_t* nfcid, uint8_t nfidLen, bool isActive, rfalNfcDepDevice *nfcDepDev );
 ReturnCode IsoDepBlockingTxRx( rfalIsoDepDevice *isoDepDev, const uint8_t *txBuf, uint16_t txBufSize, uint8_t *rxBuf, uint16_t rxBufSize, uint16_t *rxActLen );
 uint8_t APDU_check_response(uint8_t *data,uint16_t len);
 bool T_Union_Read();
 static uint32_t rng_get32(void);
+bool ReturnCode_proc(ReturnCode err);
+void NFC_Recover(void);
 ReturnCode nfcfReadBlock_default();
+void rng_init(void);
 
 #endif /* INC_CARD_READER_H_ */

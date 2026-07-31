@@ -40,6 +40,9 @@ enum{
 
 void Reader_UART_IRQHandler(uint16_t Size);
 void Reader_CDC_IRQHandler(uint8_t* data, uint8_t len);
+void Reader_HID_IRQHandler(uint8_t* data);
+void Reader_HID_SendReport(uint8_t* data, uint8_t len);
+void Reader_HID_SendReport_len(uint8_t len, ...);
 bool Interface_Send(const uint8_t* data ,uint8_t len);
 
 extern Machine Reader;

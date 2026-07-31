@@ -6,6 +6,13 @@
  */
 #include "mode_manager.h"
 #include "mode_sega_serial.h"
+#include "usbd_hid_custom_if.h"
+#include "usbd_cdc_acm_if.h"
+#include "mode_spice_api.h"
+#include "mode_namco_serial.h"
+#include "mode_aimeio.h"
+#include "LED.h"
+#include <stdarg.h>
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
@@ -15,9 +22,9 @@ extern TIM_HandleTypeDef htim17;
 
 
 extern uint8_t spice_mode_detect_flag;
+extern uint8_t dfu_flag;
 Machine Reader;
 uint8_t UART_FrameError = 0;
-//uint8_t mode_probe_flag[2] = {0,0};
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM17) {
@@ -63,11 +70,6 @@ void Mode_Poll(){
 		return;
 	}
 	if(Reader.Current_Interface == INTERFACE_NONE){
-//		Reader.Current_Interface = INTERFACE_CDC;
-//		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
-//		Reader.Current_Interface = INTERFACE_UART;
-//		spice_request(Flash.spice_setting &SYSTEM_MODE_SEETING);
-
 		Reader.Current_Interface = INTERFACE_NONE;
 	}
 }
@@ -98,6 +100,43 @@ uint8_t Mode_Detect(uint8_t* data,uint8_t len){
 	return MODE_IDLE;
 }
 
+void Packet_process(uint8_t* data, uint8_t len){
+	switch(Reader.Current_Mode){
+		case MODE_IDLE:{
+			Reader.Current_Mode = Mode_Detect(data,len);
+			break;
+		}
+		case MODE_SEGA_SERIAL:{
+			uint8_t ret = sega_packet_check(data,len);
+			if((ret == 0) || (ret == STATUS_SUM_ERROR)){
+				goto error;
+			}else{
+				Sega_Mode_Loop(ret);
+			}
+			break;
+		}
+		case MODE_SPICE_API:{
+			if(!spice_request_check(data,len)){
+				goto error;
+			}
+			break;
+		}
+		case MODE_NAMCO_SERIAL:{
+			if(!namco_packet_process(namco_packet_check(data,len))){
+				goto error;
+			}
+			break;
+		}
+		default:{
+			goto error;
+			break;
+		}
+	}
+	return;
+	error:
+	Mode_Detect(data,len);
+}
+
 void Reader_UART_Init(){
 	uint8_t Uart_Parameter = Flash.system_setting & 0b1111;
 	switch (Uart_Parameter){
@@ -122,9 +161,6 @@ void Reader_UART_Init(){
 			break;
 		}
 	}
-//	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
-//	HAL_UART_Receive_DMA(&huart1, Reader.Uart_Buffer_Receive, 256);
-//	__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
 	while(HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255) != HAL_OK);
 	__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
 }
@@ -134,7 +170,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     if ((huart->Instance == USART1) && (HAL_UARTEx_GetRxEventType(huart) == 2))
     {
     	platformLedToogle(PLATFORM_LED_AP2P_PORT, PLATFORM_LED_AP2P_PIN);
-//        HAL_UART_DMAStop(&huart1);
         Reader_UART_IRQHandler(Size);
 		while(HAL_UARTEx_ReceiveToIdle_DMA(&huart1, Reader.Uart_Buffer_Receive, 255) != HAL_OK);
         __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
@@ -163,28 +198,10 @@ void Reader_UART_IRQHandler(uint16_t Size){
 		Reader.Current_Interface = INTERFACE_UART;
 	}
 	if(Reader.Current_Interface == INTERFACE_UART){
-		switch(Reader.Current_Mode){
-			case MODE_IDLE:
-				Reader.Current_Mode = Mode_Detect(Reader.Uart_Buffer_Receive,Size);
-				break;
-			case MODE_SEGA_SERIAL:
-				Sega_Mode_Loop(sega_packet_check(Reader.Uart_Buffer_Receive,Size));
-				break;
-			case MODE_SPICE_API:
-				spice_request_check(Reader.Uart_Buffer_Receive,Size);
-				break;
-			case MODE_NAMCO_SERIAL:
-				namco_packet_process(namco_packet_check(Reader.Uart_Buffer_Receive,Size));
-				break;
-			case MODE_AIME_IO:
-				AimeIO_process(AimeIO_packet_check(Reader.Uart_Buffer_Receive,Size));
-				break;
-			default:
-				break;
-		}
-		if(Reader.Current_Mode == MODE_IDLE){
-			Reader.Current_Interface = INTERFACE_NONE;
-		}
+		Packet_process(Reader.Uart_Buffer_Receive,Size);
+	}
+	if(Reader.Current_Mode == MODE_IDLE){
+		Reader.Current_Interface = INTERFACE_NONE;
 	}
 }
 
@@ -193,37 +210,27 @@ void Reader_CDC_IRQHandler(uint8_t* data, uint8_t len){
 		Reader.Current_Interface = INTERFACE_CDC;
 	}
 	if(Reader.Current_Interface == INTERFACE_CDC){
-		switch(Reader.Current_Mode){
-			case MODE_IDLE:
-				Reader.Current_Mode = Mode_Detect(data,len);
-				break;
-			case MODE_SEGA_SERIAL:
-				Sega_Mode_Loop(sega_packet_check(data,len));
-				break;
-			case MODE_SPICE_API:
-				spice_request_check(data,len);
-				break;
-			case MODE_NAMCO_SERIAL:
-				namco_packet_process(namco_packet_check(data,len));
-				break;
-			case MODE_AIME_IO:
-				AimeIO_process(AimeIO_packet_check(data,len));
-				break;
-			default:
-				break;
-		}
+		Packet_process(data,len);
 	}
-	if(Reader.Current_Interface == MODE_IDLE){
+	if(Reader.Current_Mode == MODE_IDLE){
 		Reader.Current_Interface = INTERFACE_NONE;
 	}
 }
 
 void Reader_HID_IRQHandler(uint8_t* data){
-	if(Reader.Current_Interface == MODE_IDLE){
+	if(data[0] == 0){
+		return;
+	}else if(data[0] == 3){
 		Reader.Current_Interface = INTERFACE_HID;
 		Reader.Current_Mode = MODE_CARD_IO;
+		LED_show(data[1],data[2],data[3]);
+	}else if(data[0] == 5){
+		if(AimeIO_packet_check(data+1,32) != 0){
+			Reader.Current_Interface = INTERFACE_HID;
+			Reader.Current_Mode = MODE_AIME_IO;
+			AimeIO_process(AimeIO_packet_check(data+1,32));
+		}
 	}
-	LED_show(data[1],data[2],data[3]);
 }
 
 void Reader_Uart_SendCommand(uint8_t* data, uint8_t len){
@@ -237,8 +244,8 @@ void Reader_CDC_SendCommand(uint8_t* data, uint8_t len){
 	CDC_Transmit(0, data, len);
 }
 
-void Reader_HID_SendReport(uint8_t* data){
-	USBD_CUSTOM_HID_SendReport(&hUsbDevice, data, 9);
+void Reader_HID_SendReport(uint8_t* data, uint8_t len){
+	USBD_CUSTOM_HID_SendReport(&hUsbDevice, data, len);
 }
 
 bool Interface_Send(const uint8_t* data ,uint8_t len){
@@ -251,7 +258,7 @@ bool Interface_Send(const uint8_t* data ,uint8_t len){
 			Reader_Uart_SendCommand(data,len);
 			break;
 		case INTERFACE_HID:
-			USBD_CUSTOM_HID_SendReport(&hUsbDevice, data, 9);
+			USBD_CUSTOM_HID_SendReport(&hUsbDevice, data, len);
 			break;
 		default:
 			return false;

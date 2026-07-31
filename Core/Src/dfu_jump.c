@@ -16,8 +16,7 @@ void (*SysMemBootJump)(void);
 extern PCD_HandleTypeDef hpcd_USB_FS;
 extern USBD_HandleTypeDef hUsbDevice;
 extern TIM_HandleTypeDef htim17;
-//extern UART_HandleTypeDef huart2;
-#define huart2 (*(UART_HandleTypeDef*)(&hcom_uart[COM1]))
+extern UART_HandleTypeDef huart1;
 extern SPI_HandleTypeDef hspi1;
 
 
@@ -31,12 +30,19 @@ void Jump_To_DFU_Bootloader(void)
 {
 
   volatile uint32_t addr = DFU_BOOTLOADER_ADDRESS;
+  HAL_TIM_Base_MspDeInit(&htim17);
   USBD_DeInit(&hUsbDevice);
   HAL_PCD_MspDeInit(&hpcd_USB_FS);
-  HAL_TIM_Base_MspDeInit(&htim17);
-  HAL_UART_MspDeInit(&huart2);
-  HAL_SPI_MspDeInit(&hspi1);
+  HAL_UART_DMAStop(&huart1);
+  HAL_UART_DeInit(&huart1);
+  __HAL_RCC_USART1_CLK_DISABLE();
+  HAL_NVIC_DisableIRQ(SPI1_IRQn);
+  HAL_SPI_DeInit(&hspi1);
+  __HAL_RCC_SPI1_CLK_DISABLE();
   HAL_NVIC_DisableIRQ(EXTI0_1_IRQn);
+  HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 |
+		  	  	  GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14);
+  HAL_GPIO_DeInit(GPIOB, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12);
   // Disable RCC, set it to default (after reset) settings
   //       Internal clock, no PLL, etc.
   HAL_RCC_DeInit();
@@ -62,7 +68,3 @@ void Jump_To_DFU_Bootloader(void)
   /* Should never reach here */
   while (1);
 }
-
-
-
-

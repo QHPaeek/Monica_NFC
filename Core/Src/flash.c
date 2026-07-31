@@ -16,12 +16,12 @@
 #include "flash.h"
 #include "stm32f0xx_hal.h"
 
-#define TARGET_OFFSET 252  // 使用页的最后16字节(252~255字)
+#define TARGET_OFFSET 252  // use last 16 bytes of last page (252~255 word)
 #define LAST_PAGE_ADDR 0x0800FC00
 
 FlashData Flash;
 
-const uint8_t default_setting[5] = {0x40,0xff,0xfe,0x7f,0xfe};
+const uint8_t default_setting[7] = {0x50,0x00,0x40,0xff,0x7e,0x7f,0xfe};
 
 void flash_write(uint32_t data[4]) {
     HAL_FLASH_Unlock();
